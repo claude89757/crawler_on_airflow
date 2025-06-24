@@ -2213,290 +2213,294 @@ class XHSOperator:
                 full_url = note_url  # 长链不需要处理直接使用
 
             print(f"开始获取并解析评论，帖子 URL: {full_url}")
-
+            #检查笔记是否存在
+            note_status=self.is_note_404(full_url)
             # 打开帖子页面
-            self.driver.get(full_url)
-
-            # 等待评论区加载
-            print("等待评论区加载...")
-            self.scroll_down()
-            # 等待页面加载
-            time.sleep(1)  
-            # 修改寻找评论区逻辑，避免正文过长导致评论区不能正常加载
-            for i in range(10):
-                try:
-                    # 查找评论列表
-                    try:
-                        WebDriverWait(self.driver, 0.3).until(
-                            EC.presence_of_element_located((
-                AppiumBy.XPATH,
-                "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']/android.widget.FrameLayout/android.widget.LinearLayout"
-            ))
-            
-            #更换了评论区定位元素
-                        )
-                        print("找到评论区")
-                        break
-                    except:
-                        print("未找到评论区,再次滑动页面...")
-                        self.scroll_down()
-                        time.sleep(1)
-                except Exception as e:
-                    print(f"等待评论区加载失败: {str(e)}")
-                    return []
-
-            last_page_source = None
-            all_comments = []  # 用于存储解析后的评论
-            seen_comments = set()  # 用于去重
-            max_comments = max_comments  # 最大评论数
-            is_first_comment = True  # 标记是否是第一条评论
-
-            for attempt in range(max_attempts):
-
-
-                # 获取翻页前源码
-                before_scroll_page_source = self.driver.page_source
-
-                # 解析当前页面的评论
-                try:
-                    # 查找评论元素
-                    comment_elements = self.driver.find_elements(
-                        by=AppiumBy.XPATH,
-                        value="//android.widget.TextView[contains(@text, '')]"
-                    )
-                    
-                    # 过滤出可能是评论的元素（排除非评论文本）
-                    comment_elements = [
-                        e for e in comment_elements 
-                        if e.text and 
-                        len(e.text) > 1 and 
-                        "Say something" not in e.text and
-                        "说点什么" not in e.text and
-                        "还没有评论哦" not in e.text and
-                        "到底了" not in e.text and
-                        "评论" not in e.text and
-                        not e.text.endswith("comments") and  # 排除评论数
-                        "First comment" not in e.text and  # 排除小红书标识
-                        not re.search(r'#\S+', e.text)  # 排除包含话题标签的文本（通常是笔记正文）
-                    ]
-                    
-                    # 跳过笔记正文（通常是第一条）
-                    if comment_elements and re.search(r'#\S+', comment_elements[0].text):
-                        comment_elements = comment_elements[1:]
-                    
-                    print(f"找到 {len(comment_elements)} 个可能的评论元素")
-                    
-                    # 解析每个评论元素
-                    for comment_elem in comment_elements:
-                        
-                        #打印当前元素的属性
-                        print("当前元素属性:", {
-                            "text": comment_elem.text,
-                            "resource-id": comment_elem.get_attribute("resource-id"),
-                            "class": comment_elem.get_attribute("class"),
-                            "bounds": comment_elem.get_attribute("bounds"),
-                            "content-desc": comment_elem.get_attribute("content-desc"),
-                            "long-clickable": comment_elem.get_attribute("long-clickable")
-                        })
-                        
-                        try:
-                            # 获取评论内容
-                            comment_text = comment_elem.text.strip()
-                            
-                            # 移除日期和回复后缀，并提取时间信息
-                            time_pattern = r'(?P<date>\d{4}-\d{2}-\d{2})|(?P<short_date>\d{2}-\d{2})|(?P<yesterday>昨天\s*(?P<yesterday_time>\d{2}:\d{2}))|(?P<relative>(?P<value>\d+)\s*(?P<unit>小时|分钟)前)(?:\s*\n?\s*(?P<location>[^\s]+))?\s*回复'
-                            time_match = re.search(time_pattern, comment_text)
-                            collect_time = None
-                            
-                            if time_match:
-                                if time_match.group('date'):
-                                    # 标准日期格式，只保留日期
-                                    collect_time = time_match.group('date')
-                                elif time_match.group('short_date'):
-                                    # 短日期格式，添加当前年份
-                                    current_year = datetime.now().year
-                                    date_str = time_match.group('short_date')
-                                    collect_time = f"{current_year}-{date_str}"
-                                elif time_match.group('yesterday'):
-                                    # 昨天格式，获取当前日期并减一天
-                                    yesterday = datetime.now() - timedelta(days=1)
-                                    collect_time = yesterday.strftime('%Y-%m-%d')
-                                elif time_match.group('relative'):
-                                    # 相对时间格式（X小时/分钟前）
-                                    now = datetime.now()
-                                    value = int(time_match.group('value'))  # 直接使用捕获的数字
-                                    unit = time_match.group('unit')
-                                    if unit == '小时':
-                                        collect_time = (now - timedelta(hours=value)).strftime('%Y-%m-%d')
-                                    else:  # 分钟
-                                        collect_time = (now - timedelta(minutes=value)).strftime('%Y-%m-%d')
-                            
-                            # 移除时间信息和回复后缀
-                            # comment_text = re.sub(time_pattern, '', comment_text)
-                            # 额外清理可能的回复后缀
-                            # comment_text = re.sub(r'\s*回复\s*$', '', comment_text)
-                            # comment_text = comment_text.strip()
-                            
-                            # 跳过第一条评论（文章内容）
-                            if is_first_comment:
-                                is_first_comment = False
-                                continue
-                            
-                            # 如果评论不为空且未见过，则添加到结果中
-                            if comment_text and comment_text not in seen_comments and collect_time :
-                                # 获取点赞数
-                                try:
-                                    # 获取评论元素的位置
-                                    comment_loc = comment_elem.location
-                                    if not comment_loc:
-                                        continue
-
-                                    # 获取评论元素下方一定范围内的所有TextView
-                                    all_text_views = self.driver.find_elements(
-                                        by=AppiumBy.XPATH,
-                                        value="//android.widget.TextView[string-length(@text) > 0]"
-                                    )
-
-                                    # 找到评论下方最近的纯数字文本
-                                    closest_likes = None
-                                    min_distance = float('inf')
-
-                                    for text_view in all_text_views:
-                                        try:
-                                            # 获取元素位置
-                                            loc = text_view.location
-                                            if not loc:
-                                                continue
-                                                
-                                            # 计算垂直距离（只考虑下方的元素）
-                                            distance = loc['y'] - comment_loc['y']
-                                            
-                                            # 检查是否是纯数字且在下方的合理范围内
-                                            if (0 < distance < 200 and  # 在评论下方200像素内
-                                                text_view.text.strip().isdigit() and  # 是纯数字
-                                                distance < min_distance):  # 是最近的
-                                                closest_likes = text_view
-                                                min_distance = distance
-                                        except:
-                                            continue
-
-                                    # 获取赞数
-                                    likes = 0
-                                    if closest_likes:
-                                        likes = int(closest_likes.text.strip())
-                                except:
-                                    likes = 0
-
-                                # 尝试获取评论者信息
-                                author = "未知作者"
-                                try:
-                                    # 获取评论元素的位置
-                                    comment_loc = comment_elem.location
-                                    if not comment_loc:
-                                        print("无法获取评论元素位置")
-                                        continue
-                                    
-                                    # 在整个页面中查找作者信息
-                                    # 作者通常位于评论上方，且是独立的TextView
-                                    author_elements = self.driver.find_elements(
-                                        by=AppiumBy.XPATH,
-                                        value="//android.widget.TextView[not(contains(@text, '评论')) and not(contains(@text, '回复')) and not(contains(@text, '点赞')) and not(contains(@text, '收藏'))]"
-                                    )
-                                    
-                                    if not author_elements:
-                                        print("未找到任何可能的作者元素")
-                                        continue
-                                    
-                                    # 找到在评论上方的最近的作者元素
-                                    closest_author = None
-                                    min_distance = float('inf')
-                                    
-                                    for author_elem in author_elements:
-                                        try:
-                                            author_loc = author_elem.location
-                                            if not author_loc:
-                                                continue
-                                            
-                                            # 计算垂直距离
-                                            distance = comment_loc['y'] - author_loc['y']
-                                            # 只考虑上方的元素，且距离要合理（比如不超过200像素）
-                                            if 0 < distance < 200 and distance < min_distance:
-                                                closest_author = author_elem
-                                                min_distance = distance
-                                        except Exception as e:
-                                            print(f"处理作者元素时出错: {str(e)}")
-                                            continue
-                                    
-                                    if closest_author:
-                                        author = closest_author.text.strip()
-                                        if not author:
-                                            print("找到的作者元素文本为空")
-                                            author = "未知作者"
-                                    else:
-                                        print("未找到合适的作者元素")
-                                except Exception as e:
-                                    print(f"获取作者信息时出错: {str(e)}")
-                                
-                                #去除无用信息后的评论文本和时间、地点信息
-                                info_of_comment=self.extract_time_location_from_text(comment_text)
-                                # 构建评论数据
-                                comment_data = {
-                                    "author": author,
-                                    "content": info_of_comment['cleaned_text'], #去除无用信息后的评论
-                                    "likes": likes,
-                                    "comment_time": info_of_comment.get('timestamp', collect_time), #评论时间
-                                    "collect_time": time.strftime("%Y-%m-%d %H:%M:%S"), #评论收集时间
-                                    "location": info_of_comment.get('location', '未知'), #评论地区
-                                
-                                }
-                                print(f"解析到评论: {comment_data}")
-                                # 添加到结果列表
-                                all_comments.append(comment_data)
-                                seen_comments.add(comment_text)
-                                
-                                print(f"发现新评论: {comment_text[:50]}...")
-                                
-                                # 如果达到最大评论数，退出循环
-                                if len(all_comments) >= max_comments:
-                                    print(f"已达到最大评论数 {max_comments}，停止收集")
-                                    return all_comments
-                                
-                        except Exception as e:
-                            print(f"解析单个评论失败: {str(e)}")
-                            continue
-                except Exception as e:
-                    print(f"解析页面评论失败: {str(e)}")
-                    continue
-
-                # 更新最后的页面源码
-                # last_page_source = page_source
-
-                # 模拟滑动加载更多评论
+            if not note_status:
+                self.driver.get(full_url)
+                # 等待评论区加载
+                print("等待评论区加载...")
                 self.scroll_down()
-                print(f"第 {attempt + 1} 次滑动加载评论...")
-                #防止机器卡顿页面未更新
-                time.sleep(1) 
-                #将判断页面是否变动的逻辑调整为前后对比的方式,页面滑动前后分别获取页面源码,进行对比
-                after_scroll_page_source=self.driver.page_source
+                # 等待页面加载
+                time.sleep(1)  
+                # 修改寻找评论区逻辑，避免正文过长导致评论区不能正常加载
+                for i in range(10):
+                    try:
+                        # 查找评论列表
+                        try:
+                            WebDriverWait(self.driver, 0.3).until(
+                                EC.presence_of_element_located((
+                    AppiumBy.XPATH,
+                    "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']/android.widget.FrameLayout/android.widget.LinearLayout"
+                ))
                 
-                if before_scroll_page_source == after_scroll_page_source:
-                    print("页面未发生变化，可能已到底")
-                    break
-                
-                # page_source = self.driver.page_source
-                # if page_source == last_page_source:
-                #     print("页面未发生变化，可能已到底")
-                #     break
+                #更换了评论区定位元素
+                            )
+                            print("找到评论区")
+                            break
+                        except:
+                            print("未找到评论区,再次滑动页面...")
+                            self.scroll_down()
+                            time.sleep(1)
+                    except Exception as e:
+                        print(f"等待评论区加载失败: {str(e)}")
+                        return []
 
-            print(f"评论获取完成，共收集到 {len(all_comments)} 条评论")
-            return all_comments
+                last_page_source = None
+                all_comments = []  # 用于存储解析后的评论
+                seen_comments = set()  # 用于去重
+                max_comments = max_comments  # 最大评论数
+                is_first_comment = True  # 标记是否是第一条评论
 
+                for attempt in range(max_attempts):
+
+
+                    # 获取翻页前源码
+                    before_scroll_page_source = self.driver.page_source
+
+                    # 解析当前页面的评论
+                    try:
+                        # 查找评论元素
+                        comment_elements = self.driver.find_elements(
+                            by=AppiumBy.XPATH,
+                            value="//android.widget.TextView[contains(@text, '')]"
+                        )
+                        
+                        # 过滤出可能是评论的元素（排除非评论文本）
+                        comment_elements = [
+                            e for e in comment_elements 
+                            if e.text and 
+                            len(e.text) > 1 and 
+                            "Say something" not in e.text and
+                            "说点什么" not in e.text and
+                            "还没有评论哦" not in e.text and
+                            "到底了" not in e.text and
+                            "评论" not in e.text and
+                            not e.text.endswith("comments") and  # 排除评论数
+                            "First comment" not in e.text and  # 排除小红书标识
+                            not re.search(r'#\S+', e.text)  # 排除包含话题标签的文本（通常是笔记正文）
+                        ]
+                        
+                        # 跳过笔记正文（通常是第一条）
+                        if comment_elements and re.search(r'#\S+', comment_elements[0].text):
+                            comment_elements = comment_elements[1:]
+                        
+                        print(f"找到 {len(comment_elements)} 个可能的评论元素")
+                        
+                        # 解析每个评论元素
+                        for comment_elem in comment_elements:
+                            
+                            #打印当前元素的属性
+                            print("当前元素属性:", {
+                                "text": comment_elem.text,
+                                "resource-id": comment_elem.get_attribute("resource-id"),
+                                "class": comment_elem.get_attribute("class"),
+                                "bounds": comment_elem.get_attribute("bounds"),
+                                "content-desc": comment_elem.get_attribute("content-desc"),
+                                "long-clickable": comment_elem.get_attribute("long-clickable")
+                            })
+                            
+                            try:
+                                # 获取评论内容
+                                comment_text = comment_elem.text.strip()
+                                
+                                # 移除日期和回复后缀，并提取时间信息
+                                time_pattern = r'(?P<date>\d{4}-\d{2}-\d{2})|(?P<short_date>\d{2}-\d{2})|(?P<yesterday>昨天\s*(?P<yesterday_time>\d{2}:\d{2}))|(?P<relative>(?P<value>\d+)\s*(?P<unit>小时|分钟)前)(?:\s*\n?\s*(?P<location>[^\s]+))?\s*回复'
+                                time_match = re.search(time_pattern, comment_text)
+                                collect_time = None
+                                
+                                if time_match:
+                                    if time_match.group('date'):
+                                        # 标准日期格式，只保留日期
+                                        collect_time = time_match.group('date')
+                                    elif time_match.group('short_date'):
+                                        # 短日期格式，添加当前年份
+                                        current_year = datetime.now().year
+                                        date_str = time_match.group('short_date')
+                                        collect_time = f"{current_year}-{date_str}"
+                                    elif time_match.group('yesterday'):
+                                        # 昨天格式，获取当前日期并减一天
+                                        yesterday = datetime.now() - timedelta(days=1)
+                                        collect_time = yesterday.strftime('%Y-%m-%d')
+                                    elif time_match.group('relative'):
+                                        # 相对时间格式（X小时/分钟前）
+                                        now = datetime.now()
+                                        value = int(time_match.group('value'))  # 直接使用捕获的数字
+                                        unit = time_match.group('unit')
+                                        if unit == '小时':
+                                            collect_time = (now - timedelta(hours=value)).strftime('%Y-%m-%d')
+                                        else:  # 分钟
+                                            collect_time = (now - timedelta(minutes=value)).strftime('%Y-%m-%d')
+                                
+                                # 移除时间信息和回复后缀
+                                # comment_text = re.sub(time_pattern, '', comment_text)
+                                # 额外清理可能的回复后缀
+                                # comment_text = re.sub(r'\s*回复\s*$', '', comment_text)
+                                # comment_text = comment_text.strip()
+                                
+                                # 跳过第一条评论（文章内容）
+                                if is_first_comment:
+                                    is_first_comment = False
+                                    continue
+                                
+                                # 如果评论不为空且未见过，则添加到结果中
+                                if comment_text and comment_text not in seen_comments and collect_time :
+                                    # 获取点赞数
+                                    try:
+                                        # 获取评论元素的位置
+                                        comment_loc = comment_elem.location
+                                        if not comment_loc:
+                                            continue
+
+                                        # 获取评论元素下方一定范围内的所有TextView
+                                        all_text_views = self.driver.find_elements(
+                                            by=AppiumBy.XPATH,
+                                            value="//android.widget.TextView[string-length(@text) > 0]"
+                                        )
+
+                                        # 找到评论下方最近的纯数字文本
+                                        closest_likes = None
+                                        min_distance = float('inf')
+
+                                        for text_view in all_text_views:
+                                            try:
+                                                # 获取元素位置
+                                                loc = text_view.location
+                                                if not loc:
+                                                    continue
+                                                    
+                                                # 计算垂直距离（只考虑下方的元素）
+                                                distance = loc['y'] - comment_loc['y']
+                                                
+                                                # 检查是否是纯数字且在下方的合理范围内
+                                                if (0 < distance < 200 and  # 在评论下方200像素内
+                                                    text_view.text.strip().isdigit() and  # 是纯数字
+                                                    distance < min_distance):  # 是最近的
+                                                    closest_likes = text_view
+                                                    min_distance = distance
+                                            except:
+                                                continue
+
+                                        # 获取赞数
+                                        likes = 0
+                                        if closest_likes:
+                                            likes = int(closest_likes.text.strip())
+                                    except:
+                                        likes = 0
+
+                                    # 尝试获取评论者信息
+                                    author = "未知作者"
+                                    try:
+                                        # 获取评论元素的位置
+                                        comment_loc = comment_elem.location
+                                        if not comment_loc:
+                                            print("无法获取评论元素位置")
+                                            continue
+                                        
+                                        # 在整个页面中查找作者信息
+                                        # 作者通常位于评论上方，且是独立的TextView
+                                        author_elements = self.driver.find_elements(
+                                            by=AppiumBy.XPATH,
+                                            value="//android.widget.TextView[not(contains(@text, '评论')) and not(contains(@text, '回复')) and not(contains(@text, '点赞')) and not(contains(@text, '收藏'))]"
+                                        )
+                                        
+                                        if not author_elements:
+                                            print("未找到任何可能的作者元素")
+                                            continue
+                                        
+                                        # 找到在评论上方的最近的作者元素
+                                        closest_author = None
+                                        min_distance = float('inf')
+                                        
+                                        for author_elem in author_elements:
+                                            try:
+                                                author_loc = author_elem.location
+                                                if not author_loc:
+                                                    continue
+                                                
+                                                # 计算垂直距离
+                                                distance = comment_loc['y'] - author_loc['y']
+                                                # 只考虑上方的元素，且距离要合理（比如不超过200像素）
+                                                if 0 < distance < 200 and distance < min_distance:
+                                                    closest_author = author_elem
+                                                    min_distance = distance
+                                            except Exception as e:
+                                                print(f"处理作者元素时出错: {str(e)}")
+                                                continue
+                                        
+                                        if closest_author:
+                                            author = closest_author.text.strip()
+                                            if not author:
+                                                print("找到的作者元素文本为空")
+                                                author = "未知作者"
+                                        else:
+                                            print("未找到合适的作者元素")
+                                    except Exception as e:
+                                        print(f"获取作者信息时出错: {str(e)}")
+                                    
+                                    #去除无用信息后的评论文本和时间、地点信息
+                                    info_of_comment=self.extract_time_location_from_text(comment_text)
+                                    # 构建评论数据
+                                    comment_data = {
+                                        "author": author,
+                                        "content": info_of_comment['cleaned_text'], #去除无用信息后的评论
+                                        "likes": likes,
+                                        "comment_time": info_of_comment.get('timestamp', collect_time), #评论时间
+                                        "collect_time": time.strftime("%Y-%m-%d %H:%M:%S"), #评论收集时间
+                                        "location": info_of_comment.get('location', '未知'), #评论地区
+                                    
+                                    }
+                                    print(f"解析到评论: {comment_data}")
+                                    # 添加到结果列表
+                                    all_comments.append(comment_data)
+                                    seen_comments.add(comment_text)
+                                    
+                                    print(f"发现新评论: {comment_text[:50]}...")
+                                    
+                                    # 如果达到最大评论数，退出循环
+                                    if len(all_comments) >= max_comments:
+                                        print(f"已达到最大评论数 {max_comments}，停止收集")
+                                        return all_comments
+                                    
+                            except Exception as e:
+                                print(f"解析单个评论失败: {str(e)}")
+                                continue
+                    except Exception as e:
+                        print(f"解析页面评论失败: {str(e)}")
+                        continue
+
+                    # 更新最后的页面源码
+                    # last_page_source = page_source
+
+                    # 模拟滑动加载更多评论
+                    self.scroll_down()
+                    print(f"第 {attempt + 1} 次滑动加载评论...")
+                    #防止机器卡顿页面未更新
+                    time.sleep(1) 
+                    #将判断页面是否变动的逻辑调整为前后对比的方式,页面滑动前后分别获取页面源码,进行对比
+                    after_scroll_page_source=self.driver.page_source
+                    
+                    if before_scroll_page_source == after_scroll_page_source:
+                        print("页面未发生变化，可能已到底")
+                        break
+                    
+                    # page_source = self.driver.page_source
+                    # if page_source == last_page_source:
+                    #     print("页面未发生变化，可能已到底")
+                    #     break
+
+                print(f"评论获取完成，共收集到 {len(all_comments)} 条评论")
+                return all_comments
+            else:
+                print(f"笔记不存在或已被删除: {full_url}")
+                return []
         except Exception as e:
             print(f"获取评论失败: {str(e)}")
             import traceback
             print(traceback.format_exc())
             return []
-    #回评时候回复图片的操作
+    
+        #回评时候回复图片的操作
     def comments_reply_image(self):
         #定位到选择回复图片的元素
         WebDriverWait(self.driver, 2).until(
@@ -2546,188 +2550,192 @@ class XHSOperator:
                 print(f"处理笔记URL: {full_url}")
             else:
                 full_url = note_url #长连不需要处理直接使用
-
-            # 只有在不跳过URL打开时才重新打开笔记
-            if not skip_url_open:
-                print(f"打开新的笔记URL: {full_url}")
-                self.driver.get(full_url)
-                time.sleep(1)  # 等待页面加载
-            else:
-                print(f"跳过URL打开，继续在当前页面查找评论: {full_url}")
-            
-            # 只有在不跳过URL打开时才需要等待评论区加载
-            if not skip_url_open:
-                print("等待评论区加载...")
-                for i in range(10):
-                    try:
-                        # 查找评论列表
+            note_status=self.is_note_404(full_url)
+            # 打开帖子页面
+            if not note_status:
+                # 只有在不跳过URL打开时才重新打开笔记
+                if not skip_url_open:
+                    print(f"打开新的笔记URL: {full_url}")
+                    self.driver.get(full_url)
+                    time.sleep(1)  # 等待页面加载
+                else:
+                    print(f"跳过URL打开，继续在当前页面查找评论: {full_url}")
+                
+                # 只有在不跳过URL打开时才需要等待评论区加载
+                if not skip_url_open:
+                    print("等待评论区加载...")
+                    for i in range(10):
                         try:
-                            WebDriverWait(self.driver, 0.3).until(
-                                EC.presence_of_element_located((
-                    AppiumBy.XPATH,
-                    "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']/android.widget.FrameLayout/android.widget.LinearLayout"
-                ))
-                
-                #更换了评论区定位元素
-                            )
-                            print("找到评论区")
-                            break
-                        except:
-                            print("未找到评论区,再次滑动页面...")
-                            self.scroll_down()
-                            time.sleep(2)
-                    except Exception as e:
-                        print(f"等待评论区加载失败: {str(e)}")
-                        return []
-            else:
-                print("跳过评论区定位，直接查找目标评论")
-            
-            # 查找目标评论
-            # 先找到评论内容
-            comment_found = False
-            comment_element = None
-            max_scroll_attempts = 10
-            scroll_attempt = 0
-            
-            while scroll_attempt < max_scroll_attempts:
-                try:
-                    # 查找所有评论内容元素
-                    comment_elements = self.driver.find_elements(
-                        by=AppiumBy.XPATH,
-                        value="//android.widget.TextView[contains(@text, '')]"
-                    )
-                    
-                    # 过滤出可能是评论的元素
-                    comment_elements = [
-                        e for e in comment_elements 
-                        if e.text and 
-                        len(e.text) > 10 and 
-                        "Say something" not in e.text and
-                        "说点什么" not in e.text and
-                        "还没有评论哦" not in e.text and
-                        "到底了" not in e.text and
-                        "评论" not in e.text and
-                        not e.text.endswith("comments") and
-                        "First comment" not in e.text and
-                        not re.search(r'View \d+ replies', e.text)
-                    ]
-                    
-                    # 遍历评论元素，查找匹配的评论
-                    for elem in comment_elements:
-                        # 获取评论文本并清理
-                        elem_text = elem.text.strip()
-                        # 移除表情符号和特殊字符
-                        elem_text = re.sub(r'\[.*?\]', '', elem_text)  # 移除表情符号
-                        elem_text = re.sub(r'\s+', ' ', elem_text)  # 合并多个空格
-                        elem_text = elem_text.strip()
-                        
-                        # 清理目标评论内容
-                        target_content = re.sub(r'\[.*?\]', '', comment_content)  # 移除表情符号
-                        target_content = re.sub(r'\s+', ' ', target_content)  # 合并多个空格
-                        target_content = target_content.strip()
-                        print(f'elem_text: {elem_text}， comment_content: {comment_content}， target_content: {target_content}')
-                        # 使用部分匹配
-                        if target_content in elem_text or elem_text in target_content:
-                            print(f"找到匹配评论: {elem_text}")
-                            # 找到评论内容后，向上查找作者
-                            comment_loc = elem.location
-                            if not comment_loc:
-                                continue
-                                
-                            # 如果作者是"未知用户"，直接匹配评论内容
-                            if author == "未知用户":
-                                comment_element = elem
-                                comment_found = True
-                                print("作者为未知用户，直接匹配评论内容")
-                                break
-                                
-                            # 在整个页面中查找作者信息
-                            author_elements = self.driver.find_elements(
-                                by=AppiumBy.XPATH,
-                                value="//android.widget.TextView[not(contains(@text, '评论')) and not(contains(@text, '回复')) and not(contains(@text, '点赞')) and not(contains(@text, '收藏'))]"
-                            )
-                            
-                            if not author_elements:
-                                continue
-                            
-                            # 找到在评论上方的最近的作者元素
-                            closest_author = None
-                            min_distance = float('inf')
-                            
-                            for author_elem in author_elements:
-                                try:
-                                    author_loc = author_elem.location
-                                    if not author_loc:
-                                        continue
-                                    
-                                    # 计算垂直距离
-                                    distance = comment_loc['y'] - author_loc['y']
-                                    # 只考虑上方的元素，且距离要合理（比如不超过200像素）
-                                    if 0 < distance < 200 and distance < min_distance:
-                                        closest_author = author_elem
-                                        min_distance = distance
-                                except Exception as e:
-                                    print(f"处理作者元素时出错: {str(e)}")
-                                    continue
-                            
-                            if closest_author and closest_author.text.strip() == author:
-                                comment_element = elem
-                                comment_found = True
-                                print(f"找到匹配的作者: {author}")
-                                break
-                    
-                    if comment_found:
-                        break
-                        
-                    # 如果没找到，向下滚动
-                    self.driver.swipe(500, 1000, 500, 500, 1000)
-                    scroll_attempt += 1
-                    
-                except Exception as e:
-                    print(f"查找评论时出错: {str(e)}")
-                    # 如果没找到，向下滚动
-                    self.driver.swipe(500, 1000, 500, 500, 1000)
-                    scroll_attempt += 1
-            
-            if not comment_found:
-                print(f"未找到评论: {comment_content}")
-                return False
-            
-            # 点击评论
-            comment_element.click()
-            
-            # 等待输入框出现并输入内容
-            try:
-                # 等待输入框出现
-                reply_input = WebDriverWait(self.driver, 2).until(
-                    EC.presence_of_element_located((
-                        AppiumBy.CLASS_NAME,
-                        "android.widget.EditText"
-                    ))
-                )
-                # 输入回复内容
-                reply_input.clear()
-                reply_input.send_keys(reply_content)
-
-                if has_image:
-                    self.comments_reply_image()
-                
-                # 点击发送按钮
-                send_button = WebDriverWait(self.driver, 1).until(
-                    EC.presence_of_element_located((
+                            # 查找评论列表
+                            try:
+                                WebDriverWait(self.driver, 0.3).until(
+                                    EC.presence_of_element_located((
                         AppiumBy.XPATH,
-                        "//android.widget.TextView[@text='发送']"
+                        "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']/android.widget.FrameLayout/android.widget.LinearLayout"
                     ))
-                )
-                send_button.click()
+                    
+                    #更换了评论区定位元素
+                                )
+                                print("找到评论区")
+                                break
+                            except:
+                                print("未找到评论区,再次滑动页面...")
+                                self.scroll_down()
+                                time.sleep(2)
+                        except Exception as e:
+                            print(f"等待评论区加载失败: {str(e)}")
+                            return []
+                else:
+                    print("跳过评论区定位，直接查找目标评论")
                 
-                print(f"成功回复评论: {reply_content}")
-                return True
+                # 查找目标评论
+                # 先找到评论内容
+                comment_found = False
+                comment_element = None
+                max_scroll_attempts = 10
+                scroll_attempt = 0
                 
-            except Exception as e:
-                print(f"输入回复内容失败: {str(e)}")
+                while scroll_attempt < max_scroll_attempts:
+                    try:
+                        # 查找所有评论内容元素
+                        comment_elements = self.driver.find_elements(
+                            by=AppiumBy.XPATH,
+                            value="//android.widget.TextView[contains(@text, '')]"
+                        )
+                        
+                        # 过滤出可能是评论的元素
+                        comment_elements = [
+                            e for e in comment_elements 
+                            if e.text and 
+                            len(e.text) > 10 and 
+                            "Say something" not in e.text and
+                            "说点什么" not in e.text and
+                            "还没有评论哦" not in e.text and
+                            "到底了" not in e.text and
+                            "评论" not in e.text and
+                            not e.text.endswith("comments") and
+                            "First comment" not in e.text and
+                            not re.search(r'View \d+ replies', e.text)
+                        ]
+                        
+                        # 遍历评论元素，查找匹配的评论
+                        for elem in comment_elements:
+                            # 获取评论文本并清理
+                            elem_text = elem.text.strip()
+                            # 移除表情符号和特殊字符
+                            elem_text = re.sub(r'\[.*?\]', '', elem_text)  # 移除表情符号
+                            elem_text = re.sub(r'\s+', ' ', elem_text)  # 合并多个空格
+                            elem_text = elem_text.strip()
+                            
+                            # 清理目标评论内容
+                            target_content = re.sub(r'\[.*?\]', '', comment_content)  # 移除表情符号
+                            target_content = re.sub(r'\s+', ' ', target_content)  # 合并多个空格
+                            target_content = target_content.strip()
+                            print(f'elem_text: {elem_text}， comment_content: {comment_content}， target_content: {target_content}')
+                            # 使用部分匹配
+                            if target_content in elem_text or elem_text in target_content:
+                                print(f"找到匹配评论: {elem_text}")
+                                # 找到评论内容后，向上查找作者
+                                comment_loc = elem.location
+                                if not comment_loc:
+                                    continue
+                                    
+                                # 如果作者是"未知用户"，直接匹配评论内容
+                                if author == "未知用户":
+                                    comment_element = elem
+                                    comment_found = True
+                                    print("作者为未知用户，直接匹配评论内容")
+                                    break
+                                    
+                                # 在整个页面中查找作者信息
+                                author_elements = self.driver.find_elements(
+                                    by=AppiumBy.XPATH,
+                                    value="//android.widget.TextView[not(contains(@text, '评论')) and not(contains(@text, '回复')) and not(contains(@text, '点赞')) and not(contains(@text, '收藏'))]"
+                                )
+                                
+                                if not author_elements:
+                                    continue
+                                
+                                # 找到在评论上方的最近的作者元素
+                                closest_author = None
+                                min_distance = float('inf')
+                                
+                                for author_elem in author_elements:
+                                    try:
+                                        author_loc = author_elem.location
+                                        if not author_loc:
+                                            continue
+                                        
+                                        # 计算垂直距离
+                                        distance = comment_loc['y'] - author_loc['y']
+                                        # 只考虑上方的元素，且距离要合理（比如不超过200像素）
+                                        if 0 < distance < 200 and distance < min_distance:
+                                            closest_author = author_elem
+                                            min_distance = distance
+                                    except Exception as e:
+                                        print(f"处理作者元素时出错: {str(e)}")
+                                        continue
+                                
+                                if closest_author and closest_author.text.strip() == author:
+                                    comment_element = elem
+                                    comment_found = True
+                                    print(f"找到匹配的作者: {author}")
+                                    break
+                        
+                        if comment_found:
+                            break
+                            
+                        # 如果没找到，向下滚动
+                        self.driver.swipe(500, 1000, 500, 500, 1000)
+                        scroll_attempt += 1
+                        
+                    except Exception as e:
+                        print(f"查找评论时出错: {str(e)}")
+                        # 如果没找到，向下滚动
+                        self.driver.swipe(500, 1000, 500, 500, 1000)
+                        scroll_attempt += 1
+                
+                if not comment_found:
+                    print(f"未找到评论: {comment_content}")
+                    return False
+                
+                # 点击评论
+                comment_element.click()
+                
+                # 等待输入框出现并输入内容
+                try:
+                    # 等待输入框出现
+                    reply_input = WebDriverWait(self.driver, 2).until(
+                        EC.presence_of_element_located((
+                            AppiumBy.CLASS_NAME,
+                            "android.widget.EditText"
+                        ))
+                    )
+                    # 输入回复内容
+                    reply_input.clear()
+                    reply_input.send_keys(reply_content)
+
+                    if has_image:
+                        self.comments_reply_image()
+                    
+                    # 点击发送按钮
+                    send_button = WebDriverWait(self.driver, 1).until(
+                        EC.presence_of_element_located((
+                            AppiumBy.XPATH,
+                            "//android.widget.TextView[@text='发送']"
+                        ))
+                    )
+                    send_button.click()
+                    
+                    print(f"成功回复评论: {reply_content}")
+                    return True
+                
+                except Exception as e:
+                    print(f"输入回复内容失败: {str(e)}")
+                    return False
+            else:
+                print(f"笔记不存在或已被删除: {full_url}")
                 return False
-            
         except Exception as e:
             print(f"回复评论失败: {str(e)}")
             return False
@@ -2965,6 +2973,28 @@ class XHSOperator:
             }
             
             return error_result
+    #检查笔记是否存在
+    def is_note_404(self,short_url):
+        try:
+            # 添加请求头，模拟浏览器请求
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Connection": "keep-alive",
+            }
+            # 发送请求，禁止自动重定向
+            response = requests.get(short_url, headers=headers)
+            # 检查响应状态码
+            
+            if "你访问的页面不见了" in response.text :  # 处理重定向状态码
+                print('短链接已失效或不存在')
+                return True
+            else:
+                print('短链接有效')
+                return False    
+        except Exception as e:
+            return "请求失败: {}".format(str(e))
 
     #私信回复
     def reply_to_msg(self,msg):
