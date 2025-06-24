@@ -218,7 +218,7 @@ def collect_xhs_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到笔记URL")
         
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个笔记URL进行收集")
-        return get_notes_by_url_list(device_urls, keyword, device_index, email)
+        return get_notes_by_url_list(device_urls, keyword, device_index, email,max_comments)
     else:
         # 从数据库获取笔记URL和关键词
         notes_data = get_note_url(keyword)
@@ -231,7 +231,7 @@ def collect_xhs_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到笔记URL")
         
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个笔记URL进行收集")
-        return get_notes_by_url_list(device_urls, keyword, device_index, email)
+        return get_notes_by_url_list(device_urls, keyword, device_index, email,max_comments)
 
 def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
     """将URL列表分配给特定设备
