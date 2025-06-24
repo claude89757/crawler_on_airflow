@@ -59,7 +59,7 @@ def get_remote_devices():
 
     # 获取Airflow变量   
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
-    print(f"XHS_DEVICE_INFO_LIST: {len(device_info_list)}")
+    print(f"XHS_DEVICE_INFO_LIST: {len(device_info_list)}",device_info_list)
 
     for device_info in device_info_list:
         print(f"checking host: {device_info}")
