@@ -207,7 +207,9 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
     reply_templates = get_reply_templates_from_db(email=email)
     print(f'reply_templates: {reply_templates}')
     print(f'id_list:{id_list}')
-    if id_list is None or not id_list:
+    if id_list :
+        # 如果提供了id_list，则过滤回复模板，只保留在id_list中的模板
+        print(f"过滤回复模板，只保留ID在 {id_list} 中的模板")
         reply_templates=[item for item in reply_templates if item["id"] in id_list]
     try:
         # 初始化小红书操作器（带重试机制）
