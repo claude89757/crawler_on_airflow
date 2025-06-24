@@ -31,12 +31,12 @@ def get_reply_templates_from_db(email=None):
         print(f"根据用户邮箱 {email} 查询模板")
         cursor.execute("SELECT id,userInfo, content, image_urls FROM reply_template WHERE userInfo = %s", (email,))
         templates_data = cursor.fetchall()
-        templates = [{"content": row[1], "image_urls": row[2]} for row in templates_data]
+        templates = [{"id":row[0],"content": row[2], "image_urls": row[3]} for row in templates_data]
     else:
         print("查询所有模板")
         cursor.execute("SELECT id,userInfo, content, image_urls FROM reply_template")
         templates_data = cursor.fetchall()
-        templates = [{"content": row[1], "image_urls": row[2]} for row in templates_data]
+        templates = [{"id":row[0],"content": row[2], "image_urls": row[3]} for row in templates_data]
 
     cursor.close()
     db_conn.close()
@@ -205,6 +205,8 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
     failed_replies = 0
     # 使用email参数获取用户的回复模板
     reply_templates = get_reply_templates_from_db(email=email)
+    print(f'reply_templates: {reply_templates}')
+    print(f'id_list:{id_list}')
     if id_list is None or not id_list:
         reply_templates=[item for item in reply_templates if item["id"] in id_list]
     try:
