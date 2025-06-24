@@ -58,6 +58,7 @@ def main_handler(event, context):
         JSON格式的笔记列表
     """
     logger.info(f"收到请求: {json.dumps(event, ensure_ascii=False)}")
+    print(f"收到请求: {json.dumps(event, ensure_ascii=False)}")
     
     # 解析查询参数
     query_params = {}
@@ -75,6 +76,7 @@ def main_handler(event, context):
     
     # 提取关键字参数
     keyword = query_params.get('keyword', '')
+    email = query_params.get('email', '')
     
     if not keyword:
         return {
@@ -93,17 +95,25 @@ def main_handler(event, context):
         if keyword.startswith('"') and keyword.endswith('"'):
             keyword = keyword[1:-1]
         
-        # 查询指定关键字的笔记
-        query = "SELECT * FROM xhs_notes WHERE keyword = %s"
-        logger.info(f"执行查询: {query}, 参数: {keyword}")
-        cursor.execute(query, (keyword,))
+        if email:
+            query = "SELECT * FROM xhs_notes WHERE keyword = %s AND userInfo = %s"
+            params = (keyword, email)
+        else:
+            query = "SELECT * FROM xhs_notes WHERE keyword = %s"
+            params = (keyword,)
+        cursor.execute(query, params)
         notes = cursor.fetchall()
-        
+
         # 查询总数
-        count_query = "SELECT COUNT(*) as total FROM xhs_notes WHERE keyword = %s"
-        cursor.execute(count_query, (keyword,))
+        if email:
+            count_query = "SELECT COUNT(*) as total FROM xhs_notes WHERE keyword = %s AND userInfo = %s"
+            count_params = (keyword, email)
+        else:
+            count_query = "SELECT COUNT(*) as total FROM xhs_notes WHERE keyword = %s"
+            count_params = (keyword,)
+        cursor.execute(count_query, count_params)
         total_count = cursor.fetchone()['total']
-        
+
         # 处理日期时间格式，使其可JSON序列化
         for note in notes:
             for key, value in note.items():
@@ -135,7 +145,8 @@ if __name__ == "__main__":
     # 本地测试用
     test_event = {
         'queryString': {
-            'keyword': '美食'
+            'keyword': '美食',
+            'email': 'luyao-operate@lucy.ai'
         }
     }
     result = main_handler(test_event, {})

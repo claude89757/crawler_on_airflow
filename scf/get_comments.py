@@ -46,12 +46,13 @@ def get_db_connection():
         raise e
 
 
-def get_xhs_comments_by_keyword(keyword):
+def get_xhs_comments_by_keyword(keyword, email=None):
     """
     获取指定关键字的评论
     
     Args:
         keyword: 关键字
+        email: 可选，用户邮箱
         
     Returns:
         list: 评论列表
@@ -61,8 +62,12 @@ def get_xhs_comments_by_keyword(keyword):
         cursor = conn.cursor()
         
         # 查询指定关键字的评论
-        query = "SELECT * FROM xhs_comments WHERE keyword = %s"
-        cursor.execute(query, (keyword,))
+        if email:
+            query = "SELECT * FROM xhs_comments WHERE keyword = %s AND userInfo = %s"
+            cursor.execute(query, (keyword, email))
+        else:
+            query = "SELECT * FROM xhs_comments WHERE keyword = %s"
+            cursor.execute(query, (keyword,))
         comments = cursor.fetchall()
         
         # 关闭连接
@@ -189,28 +194,8 @@ def main_handler(event, context):
         if 'keyword' in query_params:
             # 按关键字查询
             keyword = query_params.get('keyword')
-            comments = get_xhs_comments_by_keyword(keyword)
-            total_count = len(comments)
-            
-            result = {
-                "code": 0,
-                "message": "success",
-                "data": {
-                    "total": total_count,
-                    "records": comments
-                }
-            }
-        elif 'urls' in query_params:
-            # 按URL列表查询
-            urls = query_params.get('urls', [])
-            if isinstance(urls, str):
-                # 如果是字符串，尝试解析为JSON数组
-                try:
-                    urls = json.loads(urls)
-                except:
-                    urls = [urls]  # 如果解析失败，当作单个URL处理
-            
-            comments = get_xhs_comments_by_urls(urls)
+            email = query_params.get('email')
+            comments = get_xhs_comments_by_keyword(keyword, email)
             total_count = len(comments)
             
             result = {
