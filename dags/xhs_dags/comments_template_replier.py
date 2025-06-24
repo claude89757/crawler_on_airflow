@@ -29,7 +29,12 @@ def get_reply_templates_from_db(email=None):
     # 查询回复模板
     if email:
         print(f"根据用户邮箱 {email} 查询模板")
-        cursor.execute("SELECT userInfo, content, image_urls FROM reply_template WHERE userInfo = %s", (email,))
+        cursor.execute("SELECT id,userInfo, content, image_urls FROM reply_template WHERE userInfo = %s", (email,))
+        templates_data = cursor.fetchall()
+        templates = [{"content": row[1], "image_urls": row[2]} for row in templates_data]
+    else:
+        print("查询所有模板")
+        cursor.execute("SELECT id,userInfo, content, image_urls FROM reply_template")
         templates_data = cursor.fetchall()
         templates = [{"content": row[1], "image_urls": row[2]} for row in templates_data]
 
@@ -159,7 +164,7 @@ def insert_manual_reply(comment_id: int, note_url: str, author: str, userInfo: s
 
 # 移除了对comment_reply表的更新操作
 
-def reply_with_template(comments_to_process:list, device_index: int = 0,email: str = None):       
+def reply_with_template(comments_to_process:list, device_index: int = 0,email: str = None,id_list: list = None):       
     """使用模板自动回复评论
     Args:
         comments_to_process: 需要回复的评论列表
@@ -200,6 +205,8 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
     failed_replies = 0
     # 使用email参数获取用户的回复模板
     reply_templates = get_reply_templates_from_db(email=email)
+    if id_list is None or not id_list:
+        reply_templates=[item for item in reply_templates if item["id"] in id_list]
     try:
         # 初始化小红书操作器（带重试机制）
         xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
@@ -215,8 +222,9 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                 
                 print(f"设备 {device_id} 正在处理第 {i+1}/{len(comments_to_process)} 条评论 - 作者: {author}")
                 
-                # 随机选择一条回复模板
+                #随机选择一条回复模板
                 reply_template = random.choice(reply_templates)
+                print(reply_templates)
                 reply_content = reply_template['content']
                 image_urls = reply_template['image_urls']
                 has_image=image_urls is not None and image_urls != "null" and image_urls!=""
@@ -307,7 +315,7 @@ def reply_xhs_comments(device_index: int = 0, **context):
     email = context['dag_run'].conf.get('email')
     comment_ids = context['dag_run'].conf.get('comment_ids') 
     max_comments = context['dag_run'].conf.get('max_comments') 
-    
+    id_list = context['dag_run'].conf.get('id_list', [])
     if not email:
         raise ValueError("email参数不能为空")
     
@@ -337,7 +345,7 @@ def reply_xhs_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到评论")
 
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个评论进行回复")
-        return reply_with_template(device_urls, device_index, email)
+        return reply_with_template(device_urls, device_index, email,id_list)
     else:
         # 从数据库获取评论内容
         comments_data = get_reply_contents_from_db(comment_ids=comment_ids, max_comments=max_comments)
@@ -350,7 +358,7 @@ def reply_xhs_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到评论")
 
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个评论进行回复")
-        return reply_with_template(device_urls, device_index, email)
+        return reply_with_template(device_urls, device_index, email,id_list)
 
 
 def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
