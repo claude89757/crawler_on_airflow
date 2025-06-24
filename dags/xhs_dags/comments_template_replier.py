@@ -226,7 +226,7 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                 reply_template = random.choice(reply_templates)
                 reply_content = reply_template['content']
                 image_urls = reply_template['image_urls']
-                has_image=image_urls is not None and image_urls != "null"
+                has_image=image_urls is not None and image_urls != "null" and image_urls!=""
                 print(f"选择的回复模板: {reply_content}, has_image: {has_image}, image_urls: {image_urls}")
                 
                 
