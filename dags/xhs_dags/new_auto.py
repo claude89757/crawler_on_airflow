@@ -554,8 +554,8 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
     # 从dag run配置获取参数
     email = context['dag_run'].conf.get('email')
     keyword = context['dag_run'].conf.get('keyword')
-    max_notes = context['dag_run'].conf.get('max_notes', 10)
-    max_comments = context['dag_run'].conf.get('max_comments', 10)
+    max_notes = int(context['dag_run'].conf.get('max_notes', 10))
+    max_comments = int(context['dag_run'].conf.get('max_comments', 10))
     note_type = context['dag_run'].conf.get('note_type', '图文')
     time_range = context['dag_run'].conf.get('time_range', '不限')
     search_scope = context['dag_run'].conf.get('search_scope', '不限')
