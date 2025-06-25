@@ -24,6 +24,8 @@ def trigger_and_wait_for_notes_collection(**context):
     # 从DAG运行配置中获取关键词和最大笔记数量
     keyword = dag_run.conf.get('keyword', '猫咖') if dag_run.conf else '猫咖'
     max_notes = dag_run.conf.get('max_notes', 1) if dag_run.conf else 1
+    email=dag_run.conf.get('email','yuchangongzhu@gmail.com')
+    
     
     # 使用时间戳生成唯一的run_id
     timestamp = int(time.time())
@@ -36,10 +38,11 @@ def trigger_and_wait_for_notes_collection(**context):
     
     # 触发DAG
     trigger_dag(
-        dag_id='xhs_notes_collector',
+        dag_id='notes_collector',
         conf={
             'keyword': keyword,
-            'max_notes': max_notes
+            'max_notes': max_notes,
+            'email':email
         },
         run_id=dag_run_id,
     )
@@ -50,7 +53,7 @@ def trigger_and_wait_for_notes_collection(**context):
     
     while (time.time() - start_time) < max_wait_time:
         # 使用确定的run_id查找DAG运行
-        dag_run_list = DagRun.find(dag_id="xhs_notes_collector", run_id=dag_run_id)
+        dag_run_list = DagRun.find(dag_id="notes_collector", run_id=dag_run_id)
         
         if not dag_run_list:
             print(f"[HANDLE] 等待DAG运行开始，已等待: {int(time.time() - start_time)}秒")
@@ -73,7 +76,7 @@ def trigger_and_wait_for_notes_collection(**context):
                 note_urls = XCom.get_one(
                     run_id=dag_run_id,
                     key="note_urls",
-                    dag_id="xhs_notes_collector",
+                    dag_id="notes_collector",
                     task_id="collect_xhs_notes",
                     session=session
                 )
@@ -82,7 +85,7 @@ def trigger_and_wait_for_notes_collection(**context):
                 keyword = XCom.get_one(
                     run_id=dag_run_id,
                     key="keyword",
-                    dag_id="xhs_notes_collector",
+                    dag_id="notes_collector",
                     task_id="collect_xhs_notes",
                     session=session
                 )

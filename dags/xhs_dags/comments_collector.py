@@ -257,14 +257,7 @@ def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
     # 返回分配给当前设备的URL
     return urls[start_index:end_index]
 
-def on_success_callback():
-    """任务成功完成后的回调函数
-    在任务成功完成后执行清理操作，确保小红书控制器被正确关闭
-    """
-    print("任务成功完成后执行")
-    xhs.close()  # 确保XHSOperator被正确关闭
-    time.sleep(30)  # 等待30秒，确保所有资源释放
-    print("XHSOperator已关闭,等待30秒")
+
    
 # DAG 定义
 with DAG(
@@ -290,5 +283,5 @@ with DAG(
                 'device_index': index,
             },
             provide_context=True,
-            on_success_callback=on_success_callback
+            
         )
