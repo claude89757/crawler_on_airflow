@@ -268,7 +268,6 @@ def collect_xhs_notes(device_index=0, **context) -> None:
         if xhs:
             xhs.close()
 
-
 def get_note_card_init(xhs, collected_notes, collected_titles, max_notes, process_note, keyword):
     """
     收集小红书笔记卡片
