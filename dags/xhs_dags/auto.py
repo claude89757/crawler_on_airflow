@@ -12,11 +12,11 @@ import time
 # 全局变量
 xhs = None
 
-def save_notes_to_db(notes: list):
-    """保存笔记到数据库
-    Args:
-        notes: 笔记列表
+def save_notes_to_db(notes: list) -> None:
     """
+    保存笔记到数据库(如果表不存在，则初始新建该表)
+    """
+    # 使用get_hook函数获取数据库连接
     db_hook = BaseHook.get_connection("xhs_db").get_hook()
     db_conn = db_hook.get_conn()
     cursor = db_conn.cursor()
@@ -43,17 +43,21 @@ def save_notes_to_db(notes: list):
         """)
         db_conn.commit()
         
-        # 准备插入数据的SQL语句
+        # 准备插入数据的SQL语句 - 使用INSERT IGNORE避免重复插入
         insert_sql = """
-        INSERT INTO xhs_notes 
-        (title, author, userInfo, content, likes, collects, comments, note_url, keyword, note_type, publish_time, collect_time, location) 
+        INSERT IGNORE INTO xhs_notes
+        (keyword, title, author, userInfo, content, likes, collects, comments, note_url, collect_time, note_time, note_type, note_location)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         # 批量插入笔记数据
         insert_data = []
         for note in notes:
+            # 获取URL - 优先使用note_url，如果不存在则尝试使用video_url
+            note_url = note.get('note_url', note.get('video_url', ''))
+            
             insert_data.append((
+                note.get('keyword', ''),
                 note.get('title', ''),
                 note.get('author', ''),
                 note.get('userInfo', ''),
@@ -61,18 +65,23 @@ def save_notes_to_db(notes: list):
                 note.get('likes', 0),
                 note.get('collects', 0),
                 note.get('comments', 0),
-                note.get('note_url', ''),
-                note.get('keyword', ''),
-                note.get('note_type', '图文'),
-                note.get('publish_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                note_url,  # 使用统一处理后的URL
                 note.get('collect_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                note.get('location', '')
+                note.get('note_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                note.get('note_type', ''),
+                note.get('note_location', ''),
             ))
 
+        # 执行插入操作
         cursor.executemany(insert_sql, insert_data)
+
+        # 获取实际插入的记录数
+        cursor.execute("SELECT ROW_COUNT()")
+        affected_rows = cursor.fetchone()[0]
+        
         db_conn.commit()
         
-        print(f"成功保存 {len(notes)} 条笔记到数据库")
+        print(f"成功保存 {affected_rows} 条新笔记到数据库，跳过 {len(notes) - affected_rows} 条重复笔记")
         
     except Exception as e:
         db_conn.rollback()
