@@ -26,20 +26,19 @@ def save_notes_to_db(notes: list):
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS xhs_notes (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            title TEXT,
+            keyword TEXT,
+            title TEXT NOT NULL,
             author TEXT,
             userInfo TEXT,
             content TEXT,
             likes INT DEFAULT 0,
             collects INT DEFAULT 0,
             comments INT DEFAULT 0,
-            note_url VARCHAR(512),
-            keyword VARCHAR(255) NOT NULL,
-            note_type VARCHAR(50) DEFAULT '图文',
-            publish_time TIMESTAMP NULL,
+            note_url VARCHAR(512) DEFAULT NULL,
             collect_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_comments_collected_at TIMESTAMP NULL,
-            location TEXT
+            note_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            note_type TEXT,
+            note_location TEXT 
         )
         """)
         db_conn.commit()
@@ -89,7 +88,6 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
         comments: 评论列表
         note_url: 笔记URL
         keyword: 笔记关键词
-        email: 用户邮箱
     """
     db_hook = BaseHook.get_connection("xhs_db").get_hook()
     db_conn = db_hook.get_conn()
@@ -148,7 +146,6 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
         db_conn.commit()
         
         print(f"成功保存 {len(comments)} 条评论到数据库，并更新笔记评论收集时间")
-        
     except Exception as e:
         db_conn.rollback()
         print(f"保存评论到数据库失败: {str(e)}")
@@ -249,7 +246,7 @@ def collect_notes_and_comments(device_index: int, **context):
         **context: Airflow上下文参数字典
             - keyword: 搜索关键词
             - max_notes: 最大收集笔记数量
-            - max_comments: 最大收集评论数量
+            - max_comments: 每台设备最大收集评论数量
             - email: 用户邮箱
             - note_type: 笔记类型，可选值为 '图文' 或 '视频'，默认为 '图文'
     
