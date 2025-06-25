@@ -2216,8 +2216,9 @@ class XHSOperator:
             #检查笔记是否存在
             note_status=self.is_note_404(full_url)
             # 打开帖子页面
-            if not note_status:
-                self.driver.get(full_url)
+            if not note_status or full_url == "":
+                if full_url!='':
+                    self.driver.get(full_url)
                 # 等待评论区加载
                 print("等待评论区加载...")
                 self.scroll_down()
