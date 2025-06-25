@@ -114,26 +114,42 @@ def analyze_comments_intent(comments, profile_sentence):
     :param profile_sentence: 行业及客户定位描述
     :return: 包含意向分析结果的评论列表
     """
-    results = []
+    print(f"[意向分析] 开始批量分析评论意向，共 {len(comments)} 条评论")
+    print(f"[意向分析] 使用的客户定位描述: {profile_sentence}")
     
-    for comment in comments:
+    results = []
+    processed_count = 0
+    empty_count = 0
+    error_count = 0
+    
+    for i, comment in enumerate(comments, 1):
         try:
             content = comment.get('content', '')
+            print(f"[意向分析] 处理第 {i}/{len(comments)} 条评论")
+            
             if not content.strip():
                 # 空评论默认为低意向
                 comment['intent'] = '低意向'
+                empty_count += 1
+                print(f"[意向分析] 第 {i} 条评论内容为空，设置为低意向")
             else:
+                print(f"[意向分析] 第 {i} 条评论内容: {content[:50]}{'...' if len(content) > 50 else ''}")
                 # 分析评论意向
                 intent = analyze_comment_intent(content, profile_sentence)
                 comment['intent'] = intent
+                print(f"[意向分析] 第 {i} 条评论分析结果: {intent}")
             
             results.append(comment)
+            processed_count += 1
             
         except Exception as e:
-            print(f"分析评论意向时出错: {str(e)}")
+            error_count += 1
+            print(f"[意向分析] 第 {i} 条评论分析时出错: {str(e)}")
+            print(f"[意向分析] 错误评论内容: {comment.get('content', 'N/A')}")
             comment['intent'] = '中意向'  # 出错时的默认值
             results.append(comment)
     
+    print(f"[意向分析] 批量分析完成 - 总计: {len(comments)}, 成功: {processed_count}, 空评论: {empty_count}, 错误: {error_count}")
     return results
 
 def save_analysis_results_to_db(results, profile_sentence):
