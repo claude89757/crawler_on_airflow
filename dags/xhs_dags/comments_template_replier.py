@@ -205,6 +205,7 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
     failed_replies = 0
     # 使用email参数获取用户的回复模板
     reply_templates = get_reply_templates_from_db(email=email)
+    print("all_reply_templates:",reply_templates)
     print(f'reply_templates: {reply_templates}')
     print(f'template_ids:{template_ids}')
     if template_ids :
