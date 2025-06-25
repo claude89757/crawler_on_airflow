@@ -164,7 +164,7 @@ def insert_manual_reply(comment_id: int, note_url: str, author: str, userInfo: s
 
 # 移除了对comment_reply表的更新操作
 
-def reply_with_template(comments_to_process:list, device_index: int = 0,email: str = None,templates_ids: list = None):       
+def reply_with_template(comments_to_process:list, device_index: int = 0,email: str = None,template_ids: list = None):       
     """使用模板自动回复评论
     Args:
         comments_to_process: 需要回复的评论列表
@@ -206,11 +206,11 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
     # 使用email参数获取用户的回复模板
     reply_templates = get_reply_templates_from_db(email=email)
     print(f'reply_templates: {reply_templates}')
-    print(f'templates_ids:{templates_ids}')
-    if templates_ids :
-        # 如果提供了templates_ids，则过滤回复模板，只保留在templates_ids中的模板
-        print(f"过滤回复模板，只保留ID在 {templates_ids} 中的模板")
-        reply_templates=[item for item in reply_templates if item["id"] in templates_ids]
+    print(f'template_ids:{template_ids}')
+    if template_ids :
+        # 如果提供了template_ids，则过滤回复模板，只保留在template_ids中的模板
+        print(f"过滤回复模板，只保留ID在 {template_ids} 中的模板")
+        reply_templates=[item for item in reply_templates if item["id"] in template_ids]
     try:
         # 初始化小红书操作器（带重试机制）
         xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
@@ -319,7 +319,7 @@ def reply_xhs_comments(device_index: int = 0, **context):
     email = context['dag_run'].conf.get('email')
     comment_ids = context['dag_run'].conf.get('comment_ids') 
     max_comments = context['dag_run'].conf.get('max_comments') 
-    templates_ids = context['dag_run'].conf.get('templates_ids', [])
+    template_ids = context['dag_run'].conf.get('template_ids', [])
     if not email:
         raise ValueError("email参数不能为空")
     
@@ -349,7 +349,7 @@ def reply_xhs_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到评论")
 
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个评论进行回复")
-        return reply_with_template(device_urls, device_index, email,templates_ids)
+        return reply_with_template(device_urls, device_index, email,template_ids)
     else:
         # 从数据库获取评论内容
         comments_data = get_reply_contents_from_db(comment_ids=comment_ids, max_comments=max_comments)
@@ -362,7 +362,7 @@ def reply_xhs_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到评论")
 
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个评论进行回复")
-        return reply_with_template(device_urls, device_index, email,templates_ids)
+        return reply_with_template(device_urls, device_index, email,template_ids)
 
 
 def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
