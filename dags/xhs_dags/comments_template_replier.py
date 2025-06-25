@@ -211,6 +211,7 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
         # 如果提供了template_ids，则过滤回复模板，只保留在template_ids中的模板
         print(f"过滤回复模板，只保留ID在 {template_ids} 中的模板")
         reply_templates=[item for item in reply_templates if item["id"] in template_ids]
+        print(f"过滤后的回复模板: {reply_templates}")
     try:
         # 初始化小红书操作器（带重试机制）
         xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
@@ -218,7 +219,6 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
         # 处理每条分配的评论
         previous_url = None  # 跟踪上一个处理的URL
         for i, comment in enumerate(comments_to_process):
-            print("评论内容:",comment)
             try:
                 note_url = comment['note_url']
                 author = comment['author']
