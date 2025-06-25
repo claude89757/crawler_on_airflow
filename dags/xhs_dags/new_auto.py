@@ -559,7 +559,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
     note_type = context['dag_run'].conf.get('note_type', '图文')
     time_range = context['dag_run'].conf.get('time_range', '不限')
     search_scope = context['dag_run'].conf.get('search_scope', '不限')
-    sort_by = context['dag_run'].conf.get('sort_by', '综合排序')
+    sort_by = context['dag_run'].conf.get('sort_by', '综合')
     profile_sentence = context['dag_run'].conf.get('profile_sentence', '')  # 意向分析参数
 
     # 获取设备列表
