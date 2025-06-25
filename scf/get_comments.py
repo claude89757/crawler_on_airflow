@@ -46,28 +46,42 @@ def get_db_connection():
         raise e
 
 
-def get_xhs_comments_by_keyword(keyword, email=None):
+def get_xhs_comments_by_keyword(keyword, email=None, page=1, page_size=1000):
     """
     获取指定关键字的评论
     
     Args:
         keyword: 关键字
         email: 可选，用户邮箱
+        page: 页码，默认为1
+        page_size: 每页数量，默认为1000
         
     Returns:
-        list: 评论列表
+        tuple: (评论列表, 总数)
     """
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 查询指定关键字的评论
+        # 计算偏移量
+        offset = (page - 1) * page_size
+        
+        # 查询总数
         if email:
-            query = "SELECT * FROM xhs_comments WHERE keyword = %s AND userInfo = %s"
-            cursor.execute(query, (keyword, email))
+            count_query = "SELECT COUNT(*) as total FROM xhs_comments WHERE keyword = %s AND userInfo = %s"
+            cursor.execute(count_query, (keyword, email))
         else:
-            query = "SELECT * FROM xhs_comments WHERE keyword = %s"
-            cursor.execute(query, (keyword,))
+            count_query = "SELECT COUNT(*) as total FROM xhs_comments WHERE keyword = %s"
+            cursor.execute(count_query, (keyword,))
+        total_count = cursor.fetchone()['total']
+        
+        # 查询指定关键字的评论，带分页
+        if email:
+            query = "SELECT * FROM xhs_comments WHERE keyword = %s AND userInfo = %s LIMIT %s OFFSET %s"
+            cursor.execute(query, (keyword, email, page_size, offset))
+        else:
+            query = "SELECT * FROM xhs_comments WHERE keyword = %s LIMIT %s OFFSET %s"
+            cursor.execute(query, (keyword, page_size, offset))
         comments = cursor.fetchall()
         
         # 关闭连接
@@ -80,25 +94,27 @@ def get_xhs_comments_by_keyword(keyword, email=None):
                 if isinstance(value, datetime):
                     comment[key] = value.strftime('%Y-%m-%d %H:%M:%S')
         
-        return comments
+        return comments, total_count
     except Exception as e:
         logger.error(f"获取评论失败: {str(e)}")
-        return []
+        return [], 0
 
 
-def get_xhs_comments_by_urls(urls):
+def get_xhs_comments_by_urls(urls, page=1, page_size=1000):
     """
     获取指定URL的评论
     
     Args:
         urls: URL列表
+        page: 页码，默认为1
+        page_size: 每页数量，默认为1000
         
     Returns:
-        list: 评论列表
+        tuple: (评论列表, 总数)
     """
     try:
         if not urls:
-            return []
+            return [], 0
             
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -106,9 +122,18 @@ def get_xhs_comments_by_urls(urls):
         # 构建IN查询的占位符
         placeholders = ", ".join(["%s"] * len(urls))
         
-        # 查询指定URL的评论
-        query = f"SELECT * FROM xhs_comments WHERE note_url IN ({placeholders})"
-        cursor.execute(query, tuple(urls))
+        # 计算偏移量
+        offset = (page - 1) * page_size
+        
+        # 查询总数
+        count_query = f"SELECT COUNT(*) as total FROM xhs_comments WHERE note_url IN ({placeholders})"
+        cursor.execute(count_query, tuple(urls))
+        total_count = cursor.fetchone()['total']
+        
+        # 查询指定URL的评论，带分页
+        query = f"SELECT * FROM xhs_comments WHERE note_url IN ({placeholders}) LIMIT %s OFFSET %s"
+        params = tuple(urls) + (page_size, offset)
+        cursor.execute(query, params)
         comments = cursor.fetchall()
         
         # 关闭连接
@@ -121,29 +146,43 @@ def get_xhs_comments_by_urls(urls):
                 if isinstance(value, datetime):
                     comment[key] = value.strftime('%Y-%m-%d %H:%M:%S')
         
-        return comments
+        return comments, total_count
     except Exception as e:
         logger.error(f"获取评论失败: {str(e)}")
-        return []
+        return [], 0
 
 
-def get_xhs_comments(limit=100):
+def get_xhs_comments(limit=100, page=1, page_size=1000):
     """
     获取评论，带有限制数量
     
     Args:
         limit: 限制数量，默认100条
+        page: 页码，默认为1
+        page_size: 每页数量，默认为1000
         
     Returns:
-        list: 评论列表
+        tuple: (评论列表, 总数)
     """
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 查询评论，带有限制
-        query = "SELECT * FROM xhs_comments LIMIT %s"
-        cursor.execute(query, (limit,))
+        # 计算偏移量
+        offset = (page - 1) * page_size
+        
+        # 查询总数，但不超过limit
+        count_query = "SELECT COUNT(*) as total FROM xhs_comments LIMIT %s"
+        cursor.execute(count_query, (limit,))
+        total_count = min(cursor.fetchone()['total'], limit)
+        
+        # 查询评论，带有限制和分页
+        actual_limit = min(page_size, limit - offset)
+        if actual_limit <= 0:
+            return [], total_count
+            
+        query = "SELECT * FROM xhs_comments LIMIT %s OFFSET %s"
+        cursor.execute(query, (actual_limit, offset))
         comments = cursor.fetchall()
         
         # 关闭连接
@@ -156,10 +195,10 @@ def get_xhs_comments(limit=100):
                 if isinstance(value, datetime):
                     comment[key] = value.strftime('%Y-%m-%d %H:%M:%S')
         
-        return comments
+        return comments, total_count
     except Exception as e:
         logger.error(f"获取评论失败: {str(e)}")
-        return []
+        return [], 0
 
 
 def main_handler(event, context):
@@ -189,34 +228,70 @@ def main_handler(event, context):
         except:
             pass
     
+    # 添加分页参数
+    page = int(query_params.get('page', 1))
+    page_size = int(query_params.get('page_size', 1000))
+    
+    # 限制每页最大数量为1000
+    page_size = min(page_size, 1000)
+    
     try:
         # 根据参数决定使用哪种查询方式
         if 'keyword' in query_params:
             # 按关键字查询
             keyword = query_params.get('keyword')
             email = query_params.get('email')
-            comments = get_xhs_comments_by_keyword(keyword, email)
-            total_count = len(comments)
+            comments, total_count = get_xhs_comments_by_keyword(keyword, email, page, page_size)
+            
+            # 计算总页数
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
             
             result = {
                 "code": 0,
                 "message": "success",
                 "data": {
                     "total": total_count,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": total_pages,
+                    "records": comments
+                }
+            }
+        elif 'urls' in query_params:
+            # 按URL列表查询
+            urls = query_params.get('urls', [])
+            comments, total_count = get_xhs_comments_by_urls(urls, page, page_size)
+            
+            # 计算总页数
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+            
+            result = {
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "total": total_count,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": total_pages,
                     "records": comments
                 }
             }
         else:
             # 使用默认查询，带有可选的limit参数
             limit = int(query_params.get('limit', 100))
-            comments = get_xhs_comments(limit)
-            total_count = len(comments)
+            comments, total_count = get_xhs_comments(limit, page, page_size)
+            
+            # 计算总页数
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
             
             result = {
                 "code": 0,
                 "message": "success",
                 "data": {
                     "total": total_count,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": total_pages,
                     "records": comments
                 }
             }
@@ -236,7 +311,10 @@ if __name__ == "__main__":
     # 本地测试用
     test_event = {
         'queryString': {
-            'limit': 10
+            'keyword': '美食',
+            'email': 'luyao-operate@lucy.ai',
+            'page': 1,
+            'page_size': 20
         }
     }
     result = main_handler(test_event, {})

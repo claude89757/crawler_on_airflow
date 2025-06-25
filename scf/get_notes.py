@@ -78,6 +78,16 @@ def main_handler(event, context):
     keyword = query_params.get('keyword', '')
     email = query_params.get('email', '')
     
+    # 添加分页参数
+    page = int(query_params.get('page', 1))
+    page_size = int(query_params.get('page_size', 1000))
+    
+    # 限制每页最大数量为1000
+    page_size = min(page_size, 1000)
+    
+    # 计算偏移量
+    offset = (page - 1) * page_size
+    
     if not keyword:
         return {
             'code': 1,
@@ -95,15 +105,6 @@ def main_handler(event, context):
         if keyword.startswith('"') and keyword.endswith('"'):
             keyword = keyword[1:-1]
         
-        if email:
-            query = "SELECT * FROM xhs_notes WHERE keyword = %s AND userInfo = %s"
-            params = (keyword, email)
-        else:
-            query = "SELECT * FROM xhs_notes WHERE keyword = %s"
-            params = (keyword,)
-        cursor.execute(query, params)
-        notes = cursor.fetchall()
-
         # 查询总数
         if email:
             count_query = "SELECT COUNT(*) as total FROM xhs_notes WHERE keyword = %s AND userInfo = %s"
@@ -113,6 +114,19 @@ def main_handler(event, context):
             count_params = (keyword,)
         cursor.execute(count_query, count_params)
         total_count = cursor.fetchone()['total']
+        
+        # 计算总页数
+        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+        
+        # 添加分页限制的查询
+        if email:
+            query = "SELECT * FROM xhs_notes WHERE keyword = %s AND userInfo = %s LIMIT %s OFFSET %s"
+            params = (keyword, email, page_size, offset)
+        else:
+            query = "SELECT * FROM xhs_notes WHERE keyword = %s LIMIT %s OFFSET %s"
+            params = (keyword, page_size, offset)
+        cursor.execute(query, params)
+        notes = cursor.fetchall()
 
         # 处理日期时间格式，使其可JSON序列化
         for note in notes:
@@ -120,12 +134,15 @@ def main_handler(event, context):
                 if isinstance(value, datetime):
                     note[key] = value.strftime('%Y-%m-%d %H:%M:%S')
         
-        # 构建返回结果
+        # 构建返回结果，包含分页信息
         result = {
             "code": 0,
             "message": "success",
             "data": {
                 "total": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": total_pages,
                 "records": notes
             }
         }
@@ -146,7 +163,9 @@ if __name__ == "__main__":
     test_event = {
         'queryString': {
             'keyword': '美食',
-            'email': 'luyao-operate@lucy.ai'
+            'email': 'luyao-operate@lucy.ai',
+            'page': 1,
+            'page_size': 20
         }
     }
     result = main_handler(test_event, {})
