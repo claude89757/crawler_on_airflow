@@ -505,7 +505,7 @@ def collect_note_and_comments_immediately(xhs, note_card, keyword, email, max_co
                 print(f"成功收集并保存 {len(comments)} 条评论，ID: {comment_ids}")
                 
                 # 如果提供了profile_sentence，进行意向分析
-                if profile_sentence and comment_ids:
+                if  comment_ids:
                     print(f"开始进行意向分析...")
                     # 为评论添加ID信息以便分析
                     for i, comment in enumerate(comments):
