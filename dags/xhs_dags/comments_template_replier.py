@@ -218,6 +218,7 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
         # 处理每条分配的评论
         previous_url = None  # 跟踪上一个处理的URL
         for i, comment in enumerate(comments_to_process):
+            print("评论内容:",comment)
             try:
                 note_url = comment['note_url']
                 author = comment['author']
