@@ -205,9 +205,6 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
     failed_replies = 0
     # 使用email参数获取用户的回复模板
     reply_templates = get_reply_templates_from_db(email=email)
-    print("all_reply_templates:",reply_templates)
-    print(f'reply_templates: {reply_templates}')
-    print(f'template_ids:{template_ids}')
     if template_ids :
         # 如果提供了template_ids，则过滤回复模板，只保留在template_ids中的模板
         print(f"过滤回复模板，只保留ID在 {template_ids} 中的模板")
@@ -230,12 +227,10 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                 
                 #随机选择一条回复模板
                 reply_template = random.choice(reply_templates)
-                print(reply_templates)
                 reply_content = reply_template['content']
                 image_urls = reply_template['image_urls']
                 has_image=image_urls is not None and image_urls != "null" and image_urls!=""
                 print(f"选择的回复模板: {reply_content}, has_image: {has_image}, image_urls: {image_urls}")
-                
                 
                 # 判断是否需要跳过URL打开（如果与上一个URL相同）
                 skip_url_open = (previous_url == note_url)
