@@ -2221,7 +2221,8 @@ class XHSOperator:
                     self.driver.get(full_url)
                 # 等待评论区加载
                 print("等待评论区加载...")
-                self.scroll_down()
+                if full_url != "":
+                    self.scroll_down()
                 # 等待页面加载
                 time.sleep(1)  
                 # 修改寻找评论区逻辑，避免正文过长导致评论区不能正常加载
