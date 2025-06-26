@@ -34,6 +34,32 @@ def get_note_url(keyword: str = None, **context):
     
     return results
 
+def get_author_by_url(note_url: str):
+    """根据笔记URL从数据库获取作者
+    Args:
+        note_url: 笔记URL
+    Returns:
+        str: 作者名称，如果未找到则返回None
+    """
+    try:
+        db_hook = BaseHook.get_connection("xhs_db").get_hook()
+        db_conn = db_hook.get_conn()
+        cursor = db_conn.cursor()
+        
+        # 查询笔记作者
+        cursor.execute("SELECT author FROM xhs_notes WHERE note_url = %s", (note_url,))
+        result = cursor.fetchone()
+        
+        cursor.close()
+        db_conn.close()
+        
+        if result:
+            return result[0]  # 返回作者名称
+        return None
+    except Exception as e:
+        print(f"获取作者信息失败: {str(e)}")
+        return None
+
 def save_comments_to_db(comments: list, note_url: str, keyword: str = None, email: str = None):
     """保存评论到数据库
     Args:
@@ -159,7 +185,12 @@ def get_notes_by_url_list(note_urls: list, keyword: str = None, device_index: in
                 else:
                     full_url = note_url  # 长链不需要处理直接使用
 
-                comments = xhs.collect_comments_by_url(full_url, max_comments=max_comments)
+                # 获取笔记作者
+                origin_author = get_author_by_url(note_url)
+                print(f"获取到笔记作者: {origin_author if origin_author else '未知'}")
+                
+                # 收集评论，传递原作者信息
+                comments = xhs.collect_comments_by_url(full_url, max_comments=max_comments, origin_author=origin_author)
                 # 保存评论到数据库
                 if comments:
                     save_comments_to_db(comments, note_url, keyword, email)
@@ -189,7 +220,6 @@ def collect_xhs_comments(device_index: int = 0, **context):
     """
     print(f"dag_run_conf: {context['dag_run'].conf}")
     
-    # 读取传入的参数 TODO: 后面要根据前端的逻辑调整
     email = context['dag_run'].conf.get('email')
     keyword = context['dag_run'].conf.get('keyword')
     note_urls = context['dag_run'].conf.get('note_urls')

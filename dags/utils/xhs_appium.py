@@ -2196,12 +2196,14 @@ class XHSOperator:
         except Exception as e:
             return "请求失败: {}".format(str(e))
 
-    def collect_comments_by_url(self, note_url: str, max_comments: int = 10, max_attempts: int = 10) -> list:
+    def collect_comments_by_url(self, note_url: str, max_comments: int = 10, max_attempts: int = 10, origin_author: str = None) -> list:
         """
         根据帖子 URL 获取并解析评论信息
         Args:
             note_url: 帖子 URL
-            max_attempts: 最大滑动次数
+            max_comments: 最大评论数量
+            max_attempts: 最大滑动次数1
+            origin_author: 原始作者名称（需要过滤掉）
         Returns:
             list: 解析后的评论列表
         """
@@ -2432,6 +2434,8 @@ class XHSOperator:
                                         
                                         if closest_author:
                                             author = closest_author.text.strip()
+                                            if author==origin_author:
+                                                continue;
                                             if not author:
                                                 print("找到的作者元素文本为空")
                                                 author = "未知作者"
@@ -2450,7 +2454,6 @@ class XHSOperator:
                                         "comment_time": info_of_comment.get('timestamp', collect_time), #评论时间
                                         "collect_time": time.strftime("%Y-%m-%d %H:%M:%S"), #评论收集时间
                                         "location": info_of_comment.get('location', '未知'), #评论地区
-                                    
                                     }
                                     print(f"解析到评论: {comment_data}")
                                     # 添加到结果列表
