@@ -24,11 +24,11 @@ def get_note_url(keyword: str = None, **context):
     
     # 根据是否有关键词来构建不同的SQL查询
     if keyword:
-        cursor.execute("SELECT note_url, keyword FROM xhs_notes WHERE keyword = %s", (keyword,))
+        cursor.execute("SELECT note_url, keyword,author FROM xhs_notes WHERE keyword = %s", (keyword,))
     else:
-        cursor.execute("SELECT note_url, keyword FROM xhs_notes")
-    results = [{'note_url': row[0], 'keyword': row[1]} for row in cursor.fetchall()]
-    
+        cursor.execute("SELECT note_url, keyword,author FROM xhs_notes")
+    results = [{'note_url': row[0], 'keyword': row[1], 'author': row[2]} for row in cursor.fetchall()]
+    print("results:",results)
     cursor.close()
     db_conn.close()
     
@@ -159,7 +159,7 @@ def get_notes_by_url_list(note_urls: list, keyword: str = None, device_index: in
                 else:
                     full_url = note_url  # 长链不需要处理直接使用
 
-                comments = xhs.collect_comments_by_url(full_url, max_comments=max_comments)
+                comments = xhs.collect_comments_by_url(full_url, origin_author=author,max_comments=max_comments)
                 # 保存评论到数据库
                 if comments:
                     save_comments_to_db(comments, note_url, keyword, email)
