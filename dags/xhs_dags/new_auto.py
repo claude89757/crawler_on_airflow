@@ -1031,8 +1031,8 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                     print(f"找到 {len(templates)} 个回复模板")
                     
                     # 获取高意向和中意向的评论进行回复
-                    high_intent_comments = [result for result in all_analysis_results if result.get('intent') in ['高意向', '中意向']]
-                    
+                    # high_intent_comments = [result for result in all_analysis_results if result.get('intent') in ['高意向', '中意向']]
+                    high_intent_comments=all_analysis_results
                     if high_intent_comments:
                         print(f"找到 {len(high_intent_comments)} 条高/中意向评论需要回复")
                         
