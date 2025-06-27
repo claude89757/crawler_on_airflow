@@ -895,7 +895,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
     search_scope = context['dag_run'].conf.get('search_scope', '')
     sort_by = context['dag_run'].conf.get('sort_by', '综合')
     profile_sentence = context['dag_run'].conf.get('profile_sentence', '')  # 意向分析参数
-
+    
     # 获取设备列表
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
     
@@ -911,6 +911,9 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
         device_ip = device_info.get('device_ip')
         appium_port = device_info.get('available_appium_ports')[device_index]
         device_id = device_info.get('phone_device_list')[device_index]
+        username = device_info.get('username')
+        password = device_info.get('password')
+        host_port=device_info.get('port')
     except Exception as e:
         print(f"获取设备信息失败: {e}")
         print(f"跳过当前任务，因为获取设备信息失败")
@@ -1037,25 +1040,34 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         print(f"找到 {len(high_intent_comments)} 条高/中意向评论需要回复")
                         
                         # 执行回复逻辑
+                        previous_url = None  # 跟踪上一个处理的URL
                         for comment_result in high_intent_comments:
                             try:
                                 comment_id = comment_result.get('id')
                                 if not comment_id:
                                     continue
-                                    
+                                skip_url_open = (previous_url == comment_result.get('note_url', ''))
+
+                                if has_image:
+                                    print('图片url:',image_urls)
+                                    cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
+                
                                 # 随机选择一个模板
                                 template = random.choice(templates)
                                 template_content = template.get('content', '')
                                 template_images = template.get('image_urls', '')
-                                
+                                image_urls = template['image_urls']
+                                has_image=image_urls is not None and image_urls != "null" and image_urls!=""
                                 # 执行回复（这里使用现有的XHS操作器）
                                 success = xhs.comments_reply(
                                     comment_result.get('note_url', ''),
                                     comment_result.get('author', ''),
-                                    template_content,
-                                    template_images
+                                    comment_content=comment_result.get('content', ''),
+                                    reply_content=template_content,
+                                    has_image=has_image,
+                                    skip_url_open=skip_url_open
                                 )
-                                
+                                previous_url = comment_result.get('note_url', '')
                                 if success:
                                     # 记录回复到数据库
                                     insert_manual_reply(
@@ -1103,53 +1115,6 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
         if xhs:
             xhs.close()
 
-def reply_xhs_comments(device_index: int = 0, **context):
-    """回复小红书评论
-    Args:
-        device_index: 设备索引
-        **context: Airflow上下文参数字典
-    """
-    print(f"dag_run_conf: {context['dag_run'].conf}")
-    
-    # 从DAG运行配置中获取参数，如果没有则使用默认值
-    email = context['dag_run'].conf.get('email')
-    comment_ids = context['dag_run'].conf.get('comment_ids') 
-    max_comments = context['dag_run'].conf.get('max_comments') 
-    template_ids = context['dag_run'].conf.get('template_ids', [])
-    if not email:
-        raise ValueError("email参数不能为空")
-    
-    # 获取设备列表以确定实际可用的设备数量
-    device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
-    device_info = next((device for device in device_info_list if device.get('email') == email), None)
-    
-    if not device_info:
-        print(f"跳过当前任务，因为找不到email为 {email} 的设备信息")
-        raise AirflowSkipException("找不到设备信息")
-        
-    # 确定实际可用的设备数量
-    available_devices = len(device_info.get('phone_device_list', []))
-    print(f"可用设备数量: {available_devices}")
-    
-    if available_devices == 0:
-        print(f"跳过当前任务，因为没有可用的设备")
-        raise AirflowSkipException("没有可用的设备")
-    
-    # 获取评论内容
-    comments_data = get_reply_contents_from_db(comment_ids=comment_ids, max_comments=max_comments)
-    
-    if comments_data:
-        # 将评论列表分配给不同设备
-        device_comments = distribute_urls(comments_data, device_index, available_devices)
-        if not device_comments:
-            print(f"设备索引 {device_index}: 没有分配到评论，跳过")
-            raise AirflowSkipException(f"设备索引 {device_index} 没有分配到评论")
-
-        print(f"设备索引 {device_index}: 分配到 {len(device_comments)} 个评论进行回复")
-        return reply_with_template(device_comments, device_index, email, template_ids)
-    else:
-        print(f"没有找到需要回复的评论")
-        raise AirflowSkipException("没有找到需要回复的评论")
 
 # DAG 定义
 with DAG(
