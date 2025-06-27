@@ -1043,7 +1043,11 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         # 执行回复逻辑
                         previous_url = None  # 跟踪上一个处理的URL
                         for comment_result in high_intent_comments:
+                               
                             try:
+                                template = random.choice(templates)
+                                template_content = template.get('content', '')
+                                
                                 comment_id = comment_result.get('id')
                                 if not comment_id:
                                     continue
@@ -1055,9 +1059,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                     cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
                 
                                 # 随机选择一个模板
-                                template = random.choice(templates)
-                                template_content = template.get('content', '')
-                                template_images = template.get('image_urls', '')
+                              
                                 
                                 
                                 # 执行回复（这里使用现有的XHS操作器）
