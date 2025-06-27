@@ -260,6 +260,7 @@ def reply_with_template(comments_to_process: list, device_index: int = 0, email:
                 reply_template = random.choice(reply_templates)
                 reply_content = reply_template['content']
                 image_urls = reply_template['image_urls']
+                print(image_urls)
                 has_image = image_urls is not None and image_urls != "null" and image_urls != ""
                 print(f"选择的回复模板: {reply_content}, has_image: {has_image}, image_urls: {image_urls}")
                 
@@ -1047,6 +1048,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 if not comment_id:
                                     continue
                                 skip_url_open = (previous_url == comment_result.get('note_url', ''))
+                                image_urls = template['image_urls']
                                 has_image = image_urls is not None and image_urls != "null" and image_urls != ""
                                 if has_image:
                                     print('图片url:',image_urls)
@@ -1056,7 +1058,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 template = random.choice(templates)
                                 template_content = template.get('content', '')
                                 template_images = template.get('image_urls', '')
-                                image_urls = template['image_urls']
+                                
                                 
                                 # 执行回复（这里使用现有的XHS操作器）
                                 success = xhs.comments_reply(
