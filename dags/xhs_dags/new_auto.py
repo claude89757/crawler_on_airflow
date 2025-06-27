@@ -891,8 +891,8 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
     max_notes = int(context['dag_run'].conf.get('max_notes', 10))
     max_comments = int(context['dag_run'].conf.get('max_comments', 10))
     note_type = context['dag_run'].conf.get('note_type', '图文')
-    time_range = context['dag_run'].conf.get('time_range', '不限')
-    search_scope = context['dag_run'].conf.get('search_scope', '不限')
+    time_range = context['dag_run'].conf.get('time_range', '')
+    search_scope = context['dag_run'].conf.get('search_scope', '')
     sort_by = context['dag_run'].conf.get('sort_by', '综合')
     profile_sentence = context['dag_run'].conf.get('profile_sentence', '')  # 意向分析参数
 
@@ -1049,7 +1049,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 template_images = template.get('image_urls', '')
                                 
                                 # 执行回复（这里使用现有的XHS操作器）
-                                success = xhs.reply_to_comment(
+                                success = xhs.comments_reply(
                                     comment_result.get('note_url', ''),
                                     comment_result.get('author', ''),
                                     template_content,
