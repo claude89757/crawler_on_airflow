@@ -1020,7 +1020,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
         
         # 执行评论回复逻辑
         reply_count = 0
-        if all_comment_ids and profile_sentence:  # 只有在有评论ID且进行了意向分析时才执行回复
+        if all_comment_ids:  # 只有在有评论ID且进行了意向分析时才执行回复
             print("\n========== 开始执行评论回复 ==========")
             try:
                 # 获取回复模板
