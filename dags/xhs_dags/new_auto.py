@@ -1047,7 +1047,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 if not comment_id:
                                     continue
                                 skip_url_open = (previous_url == comment_result.get('note_url', ''))
-
+                                has_image = image_urls is not None and image_urls != "null" and image_urls != ""
                                 if has_image:
                                     print('图片url:',image_urls)
                                     cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
@@ -1057,7 +1057,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 template_content = template.get('content', '')
                                 template_images = template.get('image_urls', '')
                                 image_urls = template['image_urls']
-                                has_image=image_urls is not None and image_urls != "null" and image_urls!=""
+                                
                                 # 执行回复（这里使用现有的XHS操作器）
                                 success = xhs.comments_reply(
                                     comment_result.get('note_url', ''),
