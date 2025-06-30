@@ -33,10 +33,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
     keyword = context['dag_run'].conf.get('keyword') 
     browse_time = int(context['dag_run'].conf.get('browse_time', 20))
     email = context['dag_run'].conf.get('email')
-    note_type = context['dag_run'].conf.get('note_type')  # 默认为图文类型
-    time_range = context['dag_run'].conf.get('time_range')
-    search_scope=context['dag_run'].conf.get('search_scope')
-    sort_by=context['dag_run'].conf.get('sort_by')
+    note_type = context['dag_run'].conf.get('note_type', '图文')  # 默认为图文类型
 
     # 获取设备列表
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
@@ -96,10 +93,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
             # 使用默认搜索方法（图文）
             print(f"使用图文搜索方法搜索关键词: {keyword}")
             xhs.search_keyword(keyword, filters={
-                "note_type": note_type,
-                "time_range":time_range,
-                "search_scope":search_scope,
-                "sort_by":sort_by
+                "note_type": note_type
             })
             
             print(f"开始浏览图文笔记...")
@@ -432,7 +426,7 @@ with DAG(
     schedule_interval=None,
     tags=['小红书'],
     catchup=False,
-    max_active_runs=5,
+    max_active_runs=2,
 ) as dag:
 
     for index in range(10):
