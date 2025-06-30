@@ -815,6 +815,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
             reply_count = 0  # 总回复计数
             
             while len(collected_notes) < max_notes:
+                processed_in_this_round = False  # 在每次while循环开始时重置标志
                 try:
                     print("获取所有笔记卡片元素")
                     note_cards = []
@@ -828,8 +829,6 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         print(f"获取笔记卡片失败: {e}")
                         break
                     
-                    # 只处理第一个未处理的笔记卡片
-                    processed_in_this_round = False
                     
                     # 如果processed_note_count超出当前卡片数量，重置为0（说明页面已刷新）
                     if processed_note_count >= len(note_cards):
@@ -972,17 +971,46 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         print(f"\n========== 当前笔记评论回复完成，共回复 {current_reply_count} 条评论 ==========")
                         reply_count += current_reply_count  # 累加到总回复数
                         
-                        processed_note_count += 1  # 增加已处理笔记计数
-                        processed_in_this_round = True
-                        break  # 处理完一个笔记后跳出循环，重新获取元素
+                            processed_note_count += 1  # 增加已处理笔记计数
+                            processed_in_this_round = True
+                            break  # 处理完一个笔记后跳出循环，重新获取元素
+                        else:
+                            # 当result为None时（如元素位置过高），也要增加计数器避免无限循环
+                            print(f"笔记处理失败（可能是元素位置过高），跳过当前笔记")
+                            processed_note_count += 1  # 增加已处理笔记计数
+                            # 不设置processed_in_this_round为True，让程序继续尝试处理下一个笔记
+                            # 如果所有笔记都因位置问题被跳过，会触发滚动逻辑
                     
-                    # 如果本轮没有处理任何笔记，说明可能需要滚动页面
+                    # 如果本轮没有处理任何笔记，需要滚动页面获取更多内容
                     if not processed_in_this_round:
                         if len(collected_notes) < max_notes:
+                            print(f"本轮未处理任何笔记，已处理计数: {processed_note_count}，当前卡片数: {len(note_cards)}")
                             print("滚动页面获取更多笔记...")
+                            
+                            # 记录滚动前的卡片数量
+                            cards_before_scroll = len(note_cards)
                             xhs.scroll_down()
-                            time.sleep(1)
+                            time.sleep(2)
+                            
+                            # 滚动后检查是否有新内容
+                            try:
+                                new_note_cards = xhs.driver.find_elements(
+                                    by=AppiumBy.XPATH,
+                                    value="//android.widget.FrameLayout[@resource-id='com.xingin.xhs:id/-' and @clickable='true']"
+                                )
+                                if len(new_note_cards) > cards_before_scroll:
+                                    print(f"检测到新内容，卡片数量从 {cards_before_scroll} 增加到 {len(new_note_cards)}")
+                                    # 有新内容时不重置计数器，继续从当前位置处理
+                                else:
+                                    print(f"滚动后卡片数量未增加，可能已到底部")
+                                    # 如果连续几次滚动都没有新内容，考虑重置计数器重新开始
+                                    if processed_note_count >= len(new_note_cards):
+                                        print("重置处理计数器，重新开始处理")
+                                        processed_note_count = 0
+                            except Exception as e:
+                                print(f"检查新内容失败: {e}")
                         else:
+                            print("已达到最大笔记数量，退出循环")
                             break
                     
                 except Exception as e:
