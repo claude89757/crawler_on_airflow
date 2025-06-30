@@ -227,127 +227,76 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
         Returns:
             dict: 笔记数据
         """
+        import random  # 导入random模块用于随机操作
+        
+        # 设置随机点赞和收藏的概率 (可以根据需求调整)
+        like_probability = 0.3  # 30%的概率点赞
+        collect_probability = 0.2  # 20%的概率收藏
+        
+        note_title = note_title_and_text
         try:
-            print('---------------note--------------------')
-            xhs.print_all_elements()
-            print(f"正在获取笔记内容: {note_title_and_text}")
+            # 等待页面加载完成
+            WebDriverWait(xhs.driver, 5).until(
+                EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView"))
+            )
             
-            # 等待笔记内容加载
-            time.sleep(0.5)
-            
-            # 获取笔记作者
+            # 获取笔记内容
             try:
-                # 尝试查找作者元素
-                author_element = None
-                max_scroll_attempts = 3
-                scroll_attempts = 0
-                
-                while not author_element and scroll_attempts < max_scroll_attempts:
-                    try:
-                        author_element = WebDriverWait(xhs.driver, 2).until(
-                            EC.presence_of_element_located((AppiumBy.ID, "com.xingin.xhs:id/nickNameTV"))
-                        )
-                        print(f"找到作者信息元素: {author_element.text}")
-                        author = author_element.text
-                        break
-                    except:
-                        # 向下滚动一小段距离
-                        xhs.scroll_down()
-                        scroll_attempts += 1
-                        time.sleep(1)
-                
-                if not author_element:
-                    author = ""
-                    print("未找到作者信息元素")
-                    
+                note_content_elements = xhs.driver.find_elements(
+                    by=AppiumBy.XPATH,
+                    value="//android.widget.TextView"
+                )
+                note_content = "\n".join([element.text for element in note_content_elements if element.text])
             except Exception as e:
-                author = ""
-                print(f"获取作者信息失败: {str(e)}")
+                note_content = "获取笔记内容失败"
+                print(f"获取笔记内容失败: {str(e)}")
             
-            # 获取笔记内容 - 需要滑动查找
-            content = ""
-            max_scroll_attempts = 5  # 最大滑动次数
-            scroll_count = 0
-            
-            note_title = ""
-            note_content = ""
-           
-            #修改标题定位逻辑，一般进入笔记时就可定位到标题，无需滑动，嵌套在循环中会导致二次定位成错误元素
-            # 尝试获取标题 
+            # 获取作者信息
             try:
-                # 如果失败，使用原来的方法
-                title_element = xhs.driver.find_element(
+                author_element = xhs.driver.find_element(
                     by=AppiumBy.XPATH,
-                    value="//android.widget.TextView[contains(@text, '') and string-length(@text) > 3 and not(contains(@text, '1/')) and not(contains(@text, 'LIVE')) and not(contains(@text, '试试文字发笔记')) and not(contains(@text, '关注')) and not(contains(@text, '分享')) and not(contains(@text, '作者')) and not(@resource-id='com.xingin.xhs:id/nickNameTV')]"
+                    value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/authorName']"
                 )
-                note_title = title_element.text
-                print(f"找到标题: {note_title}")
-                        
+                author = author_element.text
             except:
-                # 尝试使用resource-id匹配标题
-                title_element = xhs.driver.find_element(
-                    by=AppiumBy.XPATH,
-                    value="//android.widget.TextView[contains(@resource-id, 'com.xingin.xhs:id/') and string-length(@text) > 0 and string-length(@text) < 50]"
-                )
-                note_title = title_element.text
-                print(f"通过resource-id找到标题: {note_title}")
-            while scroll_count < max_scroll_attempts:
-                #查找笔记编辑时间
-                note_time_exists = False
-                if note_time_exists == False:
-                    try:
-                        note_time_element = xhs.driver.find_element(
-                            by=AppiumBy.XPATH,
-                            value="//android.view.View[contains(@content-desc, '-') or contains(@content-desc, ':') or contains(@content-desc, '编辑于')]"
-                        )
-                        time_content = note_time_element.get_attribute("content-desc")
-                        print(f"找到笔记修改时间: {time_content}")
-                        format_time=xhs.process_time_string(time_content)['timestamp']
-                        format_location=xhs.process_time_string(time_content)['location'].replace("编辑于","")
-                        print(f"时间格式化为: {format_time},地区格式化为: {format_location}")
-                        note_time_exists = True
-                    except:
-                        print(f"未找到笔记修改时间")
-                    
                 try:
-                   
-                    # 尝试获取正文内容 - 优先匹配长文本
-                    try:
-                        # 首先尝试匹配长文本
-                        content_element = xhs.driver.find_element(
-                            by=AppiumBy.XPATH,
-                            value="//android.widget.TextView[string-length(@text) > 100]"
-                        )
-                        note_content = content_element.text
-                        print(f"通过长文本找到正文内容: {len(note_content)} 字符")
-                    except:
-                        # 如果失败，尝试使用resource-id匹配
-                        content_element = xhs.driver.find_element(
-                            by=AppiumBy.XPATH,
-                            value="//android.widget.TextView[contains(@resource-id, 'com.xingin.xhs:id/') and string-length(@text) > 50]"
-                        )
-                        note_content = content_element.text
-                        print(f"通过resource-id找到正文内容: {len(note_content)} 字符")
-                    
-                    if note_content and note_title:
-                        print("找到正文内容和标题")
-                        print(f"标题: {note_title}")
-                        print(f"正文前100字符: {note_content[:100]}...")
-                        if note_time_exists == True:
-                            #修改时间位于正文下方，找到时间后再退出循环
-                            break
-                        else:
-                            xhs.scroll_down()
-                            time.sleep(0.5)
-                            scroll_count += 1
+                    # 尝试使用另一种方式获取作者信息
+                    author_element = xhs.driver.find_element(
+                        by=AppiumBy.XPATH,
+                        value="//android.widget.TextView[contains(@resource-id, 'authorName')]"
+                    )
+                    author = author_element.text
                 except:
-                    print(f"第 {scroll_count + 1} 次滑动查找正文...")
-                    # 向下滑动
-                    xhs.scroll_down()
-                    time.sleep(0.5)
-                    scroll_count += 1
-
-                        # 获取互动数据 - 分别处理每个数据
+                    author = "未知作者"
+                    print("获取作者信息失败")
+            
+            # 获取笔记URL
+            note_url = ""
+            
+            # 获取笔记发布时间和地点
+            format_time = ""
+            format_location = ""
+            try:
+                # 尝试获取时间和地点信息
+                time_location_element = xhs.driver.find_element(
+                    by=AppiumBy.XPATH,
+                    value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/noteDetailTimeText']"
+                )
+                time_location_text = time_location_element.text
+                
+                # 解析时间和地点
+                if "·" in time_location_text:
+                    parts = time_location_text.split("·")
+                    format_time = parts[0].strip()
+                    format_location = parts[1].strip() if len(parts) > 1 else ""
+                else:
+                    format_time = time_location_text.strip()
+                    format_location = ""
+                    
+                print(f"笔记时间: {format_time}, 地点: {format_location}")
+            except Exception as e:
+                print(f"获取笔记时间和地点失败: {str(e)}")
+            
             likes = "0"
             try:
                 # 获取点赞数 - 基于图片中的元素结构
@@ -384,6 +333,14 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                     digits = re.findall(r'\d+', likes_text)
                     likes = digits[0] if digits else "0"
                 print(f"最终点赞数: {likes}")
+                
+                # 随机决定是否点赞
+                if random.random() < like_probability:
+                    print("随机点赞操作")
+                    likes_btn.click()
+                    time.sleep(1)  # 等待点赞操作完成
+                    print("已完成随机点赞")
+                    
             except Exception as e:
                 print(f"获取点赞数失败: {str(e)}")
 
@@ -423,6 +380,14 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                     digits = re.findall(r'\d+', collects_text)
                     collects = digits[0] if digits else "0"
                 print(f"最终收藏数: {collects}")
+                
+                # 随机决定是否收藏
+                if random.random() < collect_probability:
+                    print("随机收藏操作")
+                    collects_btn.click()
+                    time.sleep(1)  # 等待收藏操作完成
+                    print("已完成随机收藏")
+                    
             except Exception as e:
                 print(f"获取收藏数失败: {str(e)}")
 
