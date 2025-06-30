@@ -830,6 +830,12 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                     
                     # 只处理第一个未处理的笔记卡片
                     processed_in_this_round = False
+                    
+                    # 如果processed_note_count超出当前卡片数量，重置为0（说明页面已刷新）
+                    if processed_note_count >= len(note_cards):
+                        print(f"已处理笔记数({processed_note_count})超出当前卡片数({len(note_cards)})，重置计数器")
+                        processed_note_count = 0
+                    
                     for i, note_card in enumerate(note_cards):
                         if len(collected_notes) >= max_notes:
                             break
