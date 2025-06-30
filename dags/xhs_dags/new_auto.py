@@ -883,7 +883,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
         
         # 执行评论回复逻辑
         reply_count = 0
-        if all_comment_ids:  # 只有在有评论ID且进行了意向分析时才执行回复
+        if all_comment_ids:  # 只有在有评论ID时才执行回复
             print("\n========== 开始执行评论回复 ==========")
             try:
                 # 获取回复模板
@@ -917,10 +917,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                     print('图片url:',image_urls)
                                     cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
                 
-                                # 随机选择一个模板
                               
-                                
-                                
                                 # 执行回复（这里使用现有的XHS操作器）
                                 success = xhs.comments_reply(
                                     comment_result.get('note_url', ''),

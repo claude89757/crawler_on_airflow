@@ -2733,11 +2733,26 @@ class XHSOperator:
                     send_button.click()
                     
                     print(f"成功回复评论: {reply_content}")
+                    if not skip_url_open:
+                    # 返回上一页
+                        try:
+                            back_btn = WebDriverWait(self.driver, 2).until(
+                                EC.presence_of_element_located((
+                                    AppiumBy.XPATH,
+                                    "//android.widget.Button[@content-desc='返回']"
+                                ))
+                            )
+                            back_btn.click()
+                            time.sleep(0.5)
+                        except Exception as e:
+                            print(f"返回上一页失败: {str(e)}")
                     return True
                 
                 except Exception as e:
                     print(f"输入回复内容失败: {str(e)}")
                     return False
+                
+                
             else:
                 print(f"笔记不存在或已被删除: {full_url}")
                 return False
