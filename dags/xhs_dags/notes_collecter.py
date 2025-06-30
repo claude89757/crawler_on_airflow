@@ -264,7 +264,7 @@ def collect_xhs_notes(device_index=0, **context) -> None:
         print(error_msg)
         raise
     finally:
-        # 确保关闭小红书操作器
+        # 确保关闭小红书
         if xhs:
             xhs.close()
 
