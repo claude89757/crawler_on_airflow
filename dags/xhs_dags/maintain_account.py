@@ -7,6 +7,7 @@ from airflow.operators.python import PythonOperator
 from airflow.models.variable import Variable
 from airflow.exceptions import AirflowSkipException
 from utils.xhs_appium import XHSOperator
+import time
 
 def browse_xhs_notes(device_index=0, **context) -> None:
     """
