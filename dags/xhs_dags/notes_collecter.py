@@ -235,8 +235,8 @@ def collect_xhs_notes(device_index=0, **context) -> None:
             print("---------------card----------------")
             xhs.print_all_elements()
             
-            # 对于图文笔记，使用 get_note_card_init 函数收集
-            get_note_card_init(xhs, collected_notes, collected_titles, max_notes, process_note, keyword)
+            # 对于图文笔记，使用 get_note_card 函数收集
+            get_note_card(xhs, collected_notes, collected_titles, max_notes, process_note, keyword)
 
         
         # 如果还有未保存的笔记，保存剩余的笔记
@@ -268,7 +268,7 @@ def collect_xhs_notes(device_index=0, **context) -> None:
         if xhs:
             xhs.close()
 
-def get_note_card_init(xhs, collected_notes, collected_titles, max_notes, process_note, keyword):
+def get_note_card(xhs, collected_notes, collected_titles, max_notes, process_note, keyword):
     """
     收集小红书笔记卡片
     """
