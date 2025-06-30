@@ -815,6 +815,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
             reply_count = 0  # 总回复计数
             
             while len(collected_notes) < max_notes:
+                processed_in_this_round = False  # 在每次while循环开始时重置标志
                 try:
                     print("获取所有笔记卡片元素")
                     note_cards = []
@@ -828,8 +829,12 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         print(f"获取笔记卡片失败: {e}")
                         break
                     
-                    # 只处理第一个未处理的笔记卡片
-                    processed_in_this_round = False
+                    # 如果没有找到笔记卡片，尝试滚动页面
+                    if len(note_cards) == 0:
+                        print("未找到笔记卡片，尝试滚动页面...")
+                        xhs.scroll_down()
+                        time.sleep(2)
+                        continue
                     
                     # 如果processed_note_count超出当前卡片数量，重置为0（说明页面已刷新）
                     if processed_note_count >= len(note_cards):
@@ -976,14 +981,21 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         processed_in_this_round = True
                         break  # 处理完一个笔记后跳出循环，重新获取元素
                     
-                    # 如果本轮没有处理任何笔记，说明可能需要滚动页面
+                    # 如果本轮没有处理任何笔记，且所有当前卡片都已处理过，需要滚动页面
                     if not processed_in_this_round:
-                        if len(collected_notes) < max_notes:
-                            print("滚动页面获取更多笔记...")
+                        if len(collected_notes) < max_notes and processed_note_count >= len(note_cards):
+                            print(f"所有当前笔记卡片({len(note_cards)})都已处理，滚动页面获取更多笔记...")
                             xhs.scroll_down()
-                            time.sleep(1)
+                            time.sleep(2)
+                            # 滚动后重置计数器，因为页面内容可能已变化
+                            processed_note_count = 0
                         else:
-                            break
+                            # 如果还有未处理的卡片但本轮没有处理，可能是其他原因，稍等再试
+                            if processed_note_count < len(note_cards):
+                                print(f"还有未处理的笔记卡片({processed_note_count}/{len(note_cards)})，稍等再试...")
+                                time.sleep(1)
+                            else:
+                                break
                     
                 except Exception as e:
                     print(f"收集笔记失败: {str(e)}")
