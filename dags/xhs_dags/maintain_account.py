@@ -232,45 +232,23 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
             xhs.print_all_elements()
             print(f"正在获取笔记内容: {note_title_and_text}")
             
-            # 等待笔记内容加载
-            time.sleep(0.5)
-            
-            # 获取笔记作者
-            try:
-                # 尝试查找作者元素
-                author_element = None
-                max_scroll_attempts = 3
-                scroll_attempts = 0
-                
-                while not author_element and scroll_attempts < max_scroll_attempts:
-                    try:
-                        author_element = WebDriverWait(xhs.driver, 2).until(
-                            EC.presence_of_element_located((AppiumBy.ID, "com.xingin.xhs:id/nickNameTV"))
-                        )
-                        print(f"找到作者信息元素: {author_element.text}")
-                        author = author_element.text
-                        break
-                    except:
-                        # 向下滚动一小段距离
-                        xhs.scroll_down()
-                        scroll_attempts += 1
-                        time.sleep(1)
-                
-                if not author_element:
-                    author = ""
-                    print("未找到作者信息元素")
-                    
-            except Exception as e:
-                author = ""
-                print(f"获取作者信息失败: {str(e)}")
-            
             # 获取笔记内容 - 需要滑动查找
             content = ""
-            max_scroll_attempts = 5  # 最大滑动次数
-            scroll_count = 0
+            import random  # 导入random模块用于随机操作
+            min_scrolls = 1  # 最少滑动次数
+            max_scrolls = 5  # 最多滑动次数
+            random_scrolls = random.randint(min_scrolls, max_scrolls)
+            
+            # 执行随机滑动，模拟自然阅读行为
+            print(f"将在笔记中执行 {random_scrolls} 次随机滑动")
+            for i in range(random_scrolls):
+                xhs.scroll_down()
+                # 随机暂停一段时间，模拟真实阅读行为
+                pause_time = random.uniform(0.1, 1.0)
+                print(f"第 {i+1}/{random_scrolls} 次滑动，暂停 {pause_time:.2f} 秒")
+                time.sleep(pause_time)
             
             note_title = ""
-            note_content = ""
            
             #修改标题定位逻辑，一般进入笔记时就可定位到标题，无需滑动，嵌套在循环中会导致二次定位成错误元素
             # 尝试获取标题 
@@ -291,63 +269,7 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                 )
                 note_title = title_element.text
                 print(f"通过resource-id找到标题: {note_title}")
-            while scroll_count < max_scroll_attempts:
-                #查找笔记编辑时间
-                note_time_exists = False
-                if note_time_exists == False:
-                    try:
-                        note_time_element = xhs.driver.find_element(
-                            by=AppiumBy.XPATH,
-                            value="//android.view.View[contains(@content-desc, '-') or contains(@content-desc, ':') or contains(@content-desc, '编辑于')]"
-                        )
-                        time_content = note_time_element.get_attribute("content-desc")
-                        print(f"找到笔记修改时间: {time_content}")
-                        format_time=xhs.process_time_string(time_content)['timestamp']
-                        format_location=xhs.process_time_string(time_content)['location'].replace("编辑于","")
-                        print(f"时间格式化为: {format_time},地区格式化为: {format_location}")
-                        note_time_exists = True
-                    except:
-                        print(f"未找到笔记修改时间")
-                    
-                try:
-                   
-                    # 尝试获取正文内容 - 优先匹配长文本
-                    try:
-                        # 首先尝试匹配长文本
-                        content_element = xhs.driver.find_element(
-                            by=AppiumBy.XPATH,
-                            value="//android.widget.TextView[string-length(@text) > 100]"
-                        )
-                        note_content = content_element.text
-                        print(f"通过长文本找到正文内容: {len(note_content)} 字符")
-                    except:
-                        # 如果失败，尝试使用resource-id匹配
-                        content_element = xhs.driver.find_element(
-                            by=AppiumBy.XPATH,
-                            value="//android.widget.TextView[contains(@resource-id, 'com.xingin.xhs:id/') and string-length(@text) > 50]"
-                        )
-                        note_content = content_element.text
-                        print(f"通过resource-id找到正文内容: {len(note_content)} 字符")
-                    
-                    if note_content and note_title:
-                        print("找到正文内容和标题")
-                        print(f"标题: {note_title}")
-                        print(f"正文前100字符: {note_content[:100]}...")
-                        if note_time_exists == True:
-                            #修改时间位于正文下方，找到时间后再退出循环
-                            break
-                        else:
-                            xhs.scroll_down()
-                            time.sleep(0.5)
-                            scroll_count += 1
-                except:
-                    print(f"第 {scroll_count + 1} 次滑动查找正文...")
-                    # 向下滑动
-                    xhs.scroll_down()
-                    time.sleep(0.5)
-                    scroll_count += 1
-
-                        # 获取互动数据 - 分别处理每个数据
+            
             likes = "0"
             try:
                 # 获取点赞数 - 基于图片中的元素结构
@@ -383,6 +305,13 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                     
                     digits = re.findall(r'\d+', likes_text)
                     likes = digits[0] if digits else "0"
+                
+                # 随机决定是否点赞
+                if random.random() < 0.3:
+                    print("随机点赞操作")
+                    likes_btn.click()
+                    print("已完成随机点赞")
+                
                 print(f"最终点赞数: {likes}")
             except Exception as e:
                 print(f"获取点赞数失败: {str(e)}")
@@ -422,6 +351,13 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                     
                     digits = re.findall(r'\d+', collects_text)
                     collects = digits[0] if digits else "0"
+                
+                # 随机决定是否收藏
+                if random.random() < 0.2:
+                    print("随机收藏操作")
+                    collects_btn.click()
+                    print("已完成随机收藏")
+                
                 print(f"最终收藏数: {collects}")
             except Exception as e:
                 print(f"获取收藏数失败: {str(e)}")
@@ -467,15 +403,13 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
 
             note_data = {
                 "title": note_title,
-                "content": note_content,
-                "author": author,
+                "author": "",
                 "likes": int(likes),
                 "collects": int(collects),
                 "comments": int(comments),
-                "note_url": note_url,
                 "collect_time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "note_time": format_time,
-                "note_location": format_location
+                "note_time": "",
+                "note_location": ""
             }
             
             print(f"获取笔记数据: {note_data}")
