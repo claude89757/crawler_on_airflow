@@ -922,7 +922,13 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                                     print(f"回复评论ID {comment_id} 失败")
                                                     
                                                 # 添加延迟避免操作过快
-                                                if not skip_url_open and previous_url:
+                                                
+                                                time.sleep(random.uniform(2, 5))
+                                                
+                                            except Exception as e:
+                                                print(f"回复评论时出错: {str(e)}")
+                                                continue
+                                        if not skip_url_open and previous_url :
                                                     # 返回上一页
                                                     try:
                                                         back_btn = xhs.driver.find_element(
@@ -934,11 +940,6 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                                         time.sleep(0.5)
                                                     except Exception as e:
                                                         print(f"返回上一页失败: {str(e)}")
-                                                time.sleep(random.uniform(2, 5))
-                                                
-                                            except Exception as e:
-                                                print(f"回复评论时出错: {str(e)}")
-                                                continue
                                     else:
                                         print("没有找到需要回复的高/中意向评论")
                                         
