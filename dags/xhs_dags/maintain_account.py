@@ -204,7 +204,7 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, process_not
             break
 
 with DAG(
-    dag_id='notes_collector',
+    dag_id='notes_browser',
     default_args={'owner': 'yuchangongzhu', 'depends_on_past': False, 'start_date': datetime(2024, 1, 1)},
     description='定浏览小红书笔记 (支持图文和视频)',
     schedule_interval=None,
