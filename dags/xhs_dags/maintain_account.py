@@ -244,7 +244,7 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
             for i in range(random_scrolls):
                 xhs.scroll_down()
                 # 随机暂停一段时间，模拟真实阅读行为
-                pause_time = random.uniform(0.5, 2.0)
+                pause_time = random.uniform(0.1, 1.0)
                 print(f"第 {i+1}/{random_scrolls} 次滑动，暂停 {pause_time:.2f} 秒")
                 time.sleep(pause_time)
             
