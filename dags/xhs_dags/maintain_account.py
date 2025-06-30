@@ -15,94 +15,14 @@ import base64
 import requests
 from utils.xhs_appium import XHSOperator
 
-
-def save_notes_to_db(notes: list) -> None:
+def browse_xhs_notes(device_index=0, **context) -> None:
     """
-    保存笔记到数据库(如果表不存在，则初始新建该表)
-    """
-    # 使用get_hook函数获取数据库连接
-    db_hook = BaseHook.get_connection("xhs_db").get_hook()
-    db_conn = db_hook.get_conn()
-    cursor = db_conn.cursor()
-
-    try:
-        # 检查表是否存在，如果不存在则创建
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS xhs_notes (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            keyword TEXT,
-            title TEXT NOT NULL,
-            author TEXT,
-            userInfo TEXT,
-            content TEXT,
-            likes INT DEFAULT 0,
-            collects INT DEFAULT 0,
-            comments INT DEFAULT 0,
-            note_url VARCHAR(512) DEFAULT NULL,
-            collect_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            note_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            note_type TEXT,
-            note_location TEXT 
-        )
-        """)
-        db_conn.commit()
-        
-        # 准备插入数据的SQL语句 - 使用INSERT IGNORE避免重复插入
-        insert_sql = """
-        INSERT IGNORE INTO xhs_notes
-        (keyword, title, author, userInfo, content, likes, collects, comments, note_url, collect_time, note_time, note_type, note_location)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        
-        # 批量插入笔记数据
-        insert_data = []
-        for note in notes:
-            # 获取URL - 优先使用note_url，如果不存在则尝试使用video_url
-            note_url = note.get('note_url', note.get('video_url', ''))
-            
-            insert_data.append((
-                note.get('keyword', ''),
-                note.get('title', ''),
-                note.get('author', ''),
-                note.get('userInfo', ''),
-                note.get('content', ''),
-                note.get('likes', 0),
-                note.get('collects', 0),
-                note.get('comments', 0),
-                note_url,  # 使用统一处理后的URL
-                note.get('collect_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                note.get('note_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                note.get('note_type', ''),
-                note.get('note_location', ''),
-            ))
-
-        # 执行插入操作
-        cursor.executemany(insert_sql, insert_data)
-
-        # 获取实际插入的记录数
-        cursor.execute("SELECT ROW_COUNT()")
-        affected_rows = cursor.fetchone()[0]
-        
-        db_conn.commit()
-        
-        print(f"成功保存 {affected_rows} 条新笔记到数据库，跳过 {len(notes) - affected_rows} 条重复笔记")
-        
-    except Exception as e:
-        db_conn.rollback()
-        print(f"保存笔记到数据库失败: {str(e)}")
-        raise
-    finally:
-        cursor.close()
-        db_conn.close()
-
-def collect_xhs_notes(device_index=0, **context) -> None:
-    """
-    收集小红书笔记
+    浏览小红书笔记
     Args:
         device_index: 设备索引
         **context: Airflow上下文参数字典
             - keyword: 搜索关键词
-            - max_notes: 最大收集笔记数量
+            - max_notes: 最大浏览笔记数量
             - email: 用户邮箱
             - note_type: 笔记类型，可选值为 '图文' 或 '视频'，默认为 '图文'
     
@@ -145,61 +65,12 @@ def collect_xhs_notes(device_index=0, **context) -> None:
     appium_server_url = f"http://{device_ip}:{appium_port}"
     
     print(f"选择设备 {device_id}, appium_server_url: {appium_server_url}")
-    print(f"开始收集关键词 '{keyword}' 的小红书笔记... ，数量为'{max_notes}'")
+    print(f"开始浏览关键词 '{keyword}' 的小红书笔记... ，数量为'{max_notes}'")
     
     xhs = None
     try:
         # 初始化小红书操作器（带重试机制）
         xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
-        
-    
-        
-        # 用于每收集三条笔记保存一次的工具函数
-        batch_size = 3  # 每批次保存的笔记数量
-        collected_notes = []  # 所有收集到的笔记
-        current_batch = []  # 当前批次的笔记
-        
-        # 定义处理笔记的回调函数
-        def process_note(note):
-            nonlocal collected_notes, current_batch
-            
-            # 添加email信息到userInfo字段
-            note['userInfo'] = email
-            note['note_type'] = note_type
-            
-            # 检查笔记URL是否已存在（处理不同类型笔记的URL字段）
-            # 图文笔记使用note_url，视频笔记使用video_url
-            note_url = note.get('note_url', note.get('video_url', ''))
-            
-            # 如果是视频笔记，将video_url复制到note_url字段以便统一处理
-            if 'video_url' in note and not 'note_url' in note:
-                note['note_url'] = note['video_url']
-            
-            if note_url:
-                # 直接查询数据库
-                db_conn = db_hook.get_conn()
-                cursor = db_conn.cursor()
-                try:
-                    cursor.execute("SELECT 1 FROM xhs_notes WHERE note_url = %s AND keyword = %s LIMIT 1", (note_url, keyword))
-                    if cursor.fetchone():
-                        print(f"笔记已存在，跳过: {note.get('title', '')}")
-                        return
-                    else:
-                        print(f"笔记不存在，添加: {note.get('title', '')},{note.get('keyword', '')},{note_url}, email: {email}")
-                finally:
-                    cursor.close()
-                    db_conn.close()
-            
-            collected_notes.append(note)
-            current_batch.append(note)
-            
-            # 当收集到3条笔记时保存到数据库
-            if len(current_batch) >= batch_size:
-                print(f"保存批次数据到数据库，当前批次包含 {len(current_batch)} 条笔记")
-                save_notes_to_db(current_batch)
-                current_batch = []  # 清空当前批次
-        
-        # 搜索关键词，并且开始收集
         print(f"搜索关键词: {keyword}, 笔记类型: {note_type}")
         collected_titles = []
         
@@ -231,44 +102,26 @@ def collect_xhs_notes(device_index=0, **context) -> None:
                 "sort_by":sort_by
             })
             
-            print(f"开始收集图文笔记,计划收集{max_notes}条...")
-            print("---------------card----------------")
-            xhs.print_all_elements()
-            
+            print(f"开始浏览图文笔记,计划浏览{max_notes}条...")
             # 对于图文笔记，使用 get_note_card_init 函数收集
-            get_note_card_init(xhs, collected_notes, collected_titles, max_notes, process_note, keyword)
+            get_note_card(xhs, collected_notes, collected_titles, max_notes, process_note, keyword)
 
-        
-        # 如果还有未保存的笔记，保存剩余的笔记
-        if current_batch:
-            print(f"保存剩余 {len(current_batch)} 条笔记到数据库")
-            save_notes_to_db(current_batch)
-        
         if not collected_notes:
             print(f"未找到关于 '{keyword}' 的笔记")
             return
             
-        # 打印收集结果
-        print("\n收集完成!")
-        print(f"共收集到 {len(collected_notes)} 条笔记")
-        
-        # 提取笔记URL列表并存入XCom
-        note_urls = [note.get('note_url', '') for note in collected_notes]
-        context['ti'].xcom_push(key='note_urls', value=note_urls)
-        context['ti'].xcom_push(key='keyword', value=keyword)
-        
-        return note_urls
+        print(f"共浏览到 {len(collected_notes)} 条笔记")
             
     except Exception as e:
         error_msg = f"收集小红书笔记失败: {str(e)}"
         print(error_msg)
         raise
     finally:
-        # 确保关闭小红书
+        # 确保关闭小红书操作器
         if xhs:
             xhs.close()
 
-def get_note_card_init(xhs, collected_notes, collected_titles, max_notes, process_note, keyword):
+def get_note_card(xhs, collected_notes, collected_titles, max_notes, process_note, keyword):
     """
     收集小红书笔记卡片
     """
@@ -351,9 +204,9 @@ def get_note_card_init(xhs, collected_notes, collected_titles, max_notes, proces
             break
 
 with DAG(
-    dag_id='notes_collector',
+    dag_id='notes_browser',
     default_args={'owner': 'yuchangongzhu', 'depends_on_past': False, 'start_date': datetime(2024, 1, 1)},
-    description='定时收集小红书笔记 (支持图文和视频)',
+    description='定浏览小红书笔记 (支持图文和视频)',
     schedule_interval=None,
     tags=['小红书'],
     catchup=False,
@@ -362,8 +215,8 @@ with DAG(
 
     for index in range(10):
         PythonOperator(
-            task_id=f'collect_xhs_notes_{index}',
-            python_callable=collect_xhs_notes,
+            task_id=f'browse_xhs_notes_{index}',
+            python_callable=browse_xhs_notes,
             op_kwargs={
                 'device_index': index,
             },
