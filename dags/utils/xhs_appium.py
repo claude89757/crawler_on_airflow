@@ -2322,6 +2322,9 @@ class XHSOperator:
         Returns:
             bool: 是否回复成功
         """
+        if comment_content is None or comment_content == "":
+            print("评论内容为空，无法回复")
+            return False
         try:
             # 获取完整URL（处理短链接）
             if len(note_url) == 34:  # 连接长度34则为短链接
