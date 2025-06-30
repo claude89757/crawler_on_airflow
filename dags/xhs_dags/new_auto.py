@@ -959,8 +959,8 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                     else:
                                         print("没有找到需要回复的高/中意向评论")
                                         
-                            except Exception as e:
-                                print(f"执行评论回复时出错: {str(e)}")
+                                except Exception as e:
+                                    print(f"执行评论回复时出错: {str(e)}")
                         else:
                             print("跳过评论回复：没有评论ID或未进行意向分析")
                             
@@ -994,19 +994,19 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
         print(f"收集评论总数: {total_comments}")
         print(f"评论数据库ID总数: {len(all_comment_ids)}")
         print(f"意向分析结果数量: {len(all_analysis_results)}")
-         print(f"总回复数量: {reply_count}")
+        print(f"总回复数量: {reply_count}")
          
          # 提取笔记URL列表
-         note_urls = [note.get('note_url', '') for note in collected_notes if note.get('note_url', '')]
-         
-         return {
-             'notes_count': len(collected_notes),
-             'comments_count': total_comments,
-             'comment_ids': all_comment_ids,
-             'note_urls': note_urls,
-             'analysis_results': all_analysis_results,
-             'reply_count': reply_count
-         }
+        note_urls = [note.get('note_url', '') for note in collected_notes if note.get('note_url', '')]
+        
+        return {
+            'notes_count': len(collected_notes),
+            'comments_count': total_comments,
+            'comment_ids': all_comment_ids,
+            'note_urls': note_urls,
+            'analysis_results': all_analysis_results,
+            'reply_count': reply_count
+        }
        
             
     except Exception as e:
