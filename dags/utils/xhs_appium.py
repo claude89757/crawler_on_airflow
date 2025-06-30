@@ -2449,7 +2449,7 @@ class XHSOperator:
                                     # 构建评论数据
                                     comment_data = {
                                         "author": author,
-                                        "content": info_of_comment['cleaned_text'], #去除无用信息后的评论
+                                        "content": info_of_comment['cleaned_text'].replace('回复',''), #去除无用信息后的评论
                                         "likes": likes,
                                         "comment_time": info_of_comment.get('timestamp', collect_time), #评论时间
                                         "collect_time": time.strftime("%Y-%m-%d %H:%M:%S"), #评论收集时间
