@@ -472,7 +472,6 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                 "likes": int(likes),
                 "collects": int(collects),
                 "comments": int(comments),
-                "note_url": note_url,
                 "collect_time": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "note_time": format_time,
                 "note_location": format_location
