@@ -971,9 +971,15 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         print(f"\n========== 当前笔记评论回复完成，共回复 {current_reply_count} 条评论 ==========")
                         reply_count += current_reply_count  # 累加到总回复数
                         
-                        processed_note_count += 1  # 增加已处理笔记计数
-                        processed_in_this_round = True
-                        break  # 处理完一个笔记后跳出循环，重新获取元素
+                            processed_note_count += 1  # 增加已处理笔记计数
+                            processed_in_this_round = True
+                            break  # 处理完一个笔记后跳出循环，重新获取元素
+                        else:
+                            # 当result为None时（如元素位置过高），也要增加计数器避免无限循环
+                            print(f"笔记处理失败（可能是元素位置过高），跳过当前笔记")
+                            processed_note_count += 1  # 增加已处理笔记计数
+                            # 不设置processed_in_this_round为True，让程序继续尝试处理下一个笔记
+                            # 如果所有笔记都因位置问题被跳过，会触发滚动逻辑
                     
                     # 如果本轮没有处理任何笔记，需要滚动页面获取更多内容
                     if not processed_in_this_round:
