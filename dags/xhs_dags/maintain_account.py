@@ -6,16 +6,14 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.models.variable import Variable
 from airflow.exceptions import AirflowSkipException
-from utils.xhs_appium import XHSOperator
-import time
-import re
 
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from airflow.models.variable import Variable
+from utils.xhs_appium import XHSOperator
 
-
+import time
+import re
 
 def browse_xhs_notes(device_index=0, **context) -> None:
     """
@@ -118,10 +116,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
         print("\n收集完成!")
         print(f"共收集到 {len(collected_notes)} 条笔记")
         
-        # 提取笔记URL列表并存入XCom
-        note_urls = [note.get('note_url', '') for note in collected_notes]
-        
-        return note_urls
+        return collected_notes
             
     except Exception as e:
         error_msg = f"浏览小红书笔记失败: {str(e)}"
@@ -136,8 +131,6 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword):
     """
     收集小红书笔记卡片
     """
-    import time
-    from appium.webdriver.common.appiumby import AppiumBy
     while len(collected_notes) < max_notes:
         try:
             print("获取所有笔记卡片元素")
@@ -459,53 +452,6 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                 print(f"最终评论数: {comments}")
             except Exception as e:
                 print(f"获取评论数失败: {str(e)}")
-
-            # 5. 最后获取分享链接
-            note_url = ""
-            try:
-                # 点击分享按钮
-                share_btn = WebDriverWait(xhs.driver, 5).until(
-                    EC.presence_of_element_located((
-                        AppiumBy.XPATH,
-                        "//android.widget.Button[@content-desc='分享']"
-                    ))
-                )
-                share_btn.click()
-                time.sleep(1)
-                
-                # 点击复制链接
-                copy_link_btn = WebDriverWait(xhs.driver, 5).until(
-                    EC.presence_of_element_located((
-                        AppiumBy.XPATH,
-                        "//android.widget.TextView[@text='复制链接']"
-                    ))
-                )
-                copy_link_btn.click()
-                time.sleep(1)
-                
-                # 获取剪贴板内容
-                clipboard_data = xhs.driver.get_clipboard_text()
-                share_text = clipboard_data.strip()
-                
-                # 从分享文本中提取URL
-                url_start = share_text.find('http://')
-                if url_start == -1:
-                    url_start = share_text.find('https://')
-                url_end = share_text.find('，', url_start) if url_start != -1 else -1
-                
-                if url_start != -1:
-                    note_url = share_text[url_start:url_end] if url_end != -1 else share_text[url_start:]
-                    print(f"提取到笔记URL: {note_url}")
-                    note_url = xhs.get_redirect_url(note_url)
-                    print(f"重定向后的笔记URL: {note_url}")
-                    
-                else:
-                    note_url = "未知"
-                    print(f"未能从分享链接中提取URL: {url_start}")
-            
-            except Exception as e:
-                print(f"获取分享链接失败: {str(e)}")
-                note_url = "未知"
 
             note_data = {
                 "title": note_title,
