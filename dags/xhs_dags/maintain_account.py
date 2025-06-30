@@ -31,7 +31,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
     """
     # 获取输入参数
     keyword = context['dag_run'].conf.get('keyword') 
-    browse_time = int(context['dag_run'].conf.get('browse_time', 2))  # 默认浏览2分钟
+    browse_time = int(context['dag_run'].conf.get('browse_time', 0.5))
     email = context['dag_run'].conf.get('email')
     note_type = context['dag_run'].conf.get('note_type')  # 默认为图文类型
     time_range = context['dag_run'].conf.get('time_range')
