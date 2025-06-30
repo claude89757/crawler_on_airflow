@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json
-import time
 from datetime import datetime, timedelta
-import re 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.models.variable import Variable
-from airflow.hooks.base import BaseHook
 from airflow.exceptions import AirflowSkipException
-from appium.webdriver.common.appiumby import AppiumBy
-import base64
-import requests
 from utils.xhs_appium import XHSOperator
 
 def browse_xhs_notes(device_index=0, **context) -> None:
@@ -102,10 +95,10 @@ def browse_xhs_notes(device_index=0, **context) -> None:
                 "sort_by":sort_by
             })
             
-            print(f"开始浏览图文笔记,计划浏览{max_notes}条...")
+            print(f"开始浏览图文笔记,计划浏览{max_notes}条...--------------------------------------")
             xhs.print_all_elements()
             
-            get_note_card_init(xhs, collected_notes, collected_titles, max_notes, keyword)
+            get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword)
 
         
         if not collected_notes:
@@ -118,8 +111,6 @@ def browse_xhs_notes(device_index=0, **context) -> None:
         
         # 提取笔记URL列表并存入XCom
         note_urls = [note.get('note_url', '') for note in collected_notes]
-        context['ti'].xcom_push(key='note_urls', value=note_urls)
-        context['ti'].xcom_push(key='keyword', value=keyword)
         
         return note_urls
             
@@ -132,7 +123,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
         if xhs:
             xhs.close()
 
-def get_note_card_init(xhs, collected_notes, collected_titles, max_notes, keyword):
+def get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword):
     """
     收集小红书笔记卡片
     """
