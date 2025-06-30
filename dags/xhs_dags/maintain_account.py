@@ -234,6 +234,12 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
             
             # 等待笔记内容加载
             time.sleep(0.5)
+
+            import random  # 导入random模块用于随机操作
+        
+            # 设置随机点赞和收藏的概率 (可以根据需求调整)
+            like_probability = 0.3  # 30%的概率点赞
+            collect_probability = 0.2  # 20%的概率收藏
             
             # 获取笔记作者
             try:
@@ -383,6 +389,13 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                     
                     digits = re.findall(r'\d+', likes_text)
                     likes = digits[0] if digits else "0"
+                
+                # 随机决定是否点赞
+                if random.random() < like_probability:
+                    print("随机点赞操作")
+                    likes_btn.click()
+                    print("已完成随机点赞")
+                
                 print(f"最终点赞数: {likes}")
             except Exception as e:
                 print(f"获取点赞数失败: {str(e)}")
@@ -422,6 +435,13 @@ def get_note_data(xhs: XHSOperator, note_title_and_text: str):
                     
                     digits = re.findall(r'\d+', collects_text)
                     collects = digits[0] if digits else "0"
+                
+                # 随机决定是否收藏
+                if random.random() < collect_probability:
+                    print("随机收藏操作")
+                    collects_btn.click()
+                    print("已完成随机收藏")
+                
                 print(f"最终收藏数: {collects}")
             except Exception as e:
                 print(f"获取收藏数失败: {str(e)}")
