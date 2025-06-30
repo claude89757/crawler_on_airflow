@@ -705,18 +705,6 @@ def collect_note_and_comments_immediately(xhs, note_card, keyword, email, max_co
                 
         except Exception as e:
             print(f"收集评论时出错: {str(e)}")
-        
-        # 返回上一页
-        try:
-            back_btn = xhs.driver.find_element(
-                by=AppiumBy.XPATH,
-                value="//android.widget.Button[@content-desc='返回']"
-            )
-            back_btn.click()
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"返回上一页失败: {str(e)}")
-        
         # 记录已收集的标题
         collected_titles.append(note_title_and_text)
         
@@ -890,8 +878,9 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                     if templates:
                                         print(f"找到 {len(templates)} 个回复模板")
                                         
+                                        current_high_intent_comments=result['analysis_results']
                                         # 获取当前笔记的高意向和中意向评论
-                                        current_high_intent_comments = [res for res in result['analysis_results'] if res.get('intent') in ['高意向', '中意向']]
+                                        # current_high_intent_comments = [res for res in result['analysis_results'] if res.get('intent') in ['高意向', '中意向']]
                                         
                                         if current_high_intent_comments:
                                             print(f"当前笔记找到 {len(current_high_intent_comments)} 条高/中意向评论需要回复")
