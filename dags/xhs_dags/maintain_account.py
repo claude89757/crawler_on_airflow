@@ -8,7 +8,11 @@ from airflow.models.variable import Variable
 from airflow.exceptions import AirflowSkipException
 from utils.xhs_appium import XHSOperator
 import time
+import re
+
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.webdriver.support.ui import WebDriverWait
+
 
 
 def browse_xhs_notes(device_index=0, **context) -> None:
