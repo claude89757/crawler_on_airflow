@@ -31,7 +31,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
     """
     # 获取输入参数
     keyword = context['dag_run'].conf.get('keyword') 
-    browse_time = int(context['dag_run'].conf.get('browse_time', 3))
+    browse_time = int(context['dag_run'].conf.get('browse_time', 20))
     email = context['dag_run'].conf.get('email')
     note_type = context['dag_run'].conf.get('note_type')  # 默认为图文类型
     time_range = context['dag_run'].conf.get('time_range')
@@ -134,7 +134,7 @@ def get_note_card(xhs, collected_notes, collected_titles):
     """
     收集小红书笔记卡片
     """
-    import random  # 导入random模块用于随机选择
+    import random
     
     # 设置随机浏览的概率 (可以根据需求调整，这里设置为40%的概率会点开一篇笔记)
     browse_probability = 0.4
