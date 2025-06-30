@@ -964,8 +964,8 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         else:
                             print("跳过评论回复：没有评论ID或未进行意向分析")
                             
-                            print(f"\n========== 当前笔记评论回复完成，共回复 {current_reply_count} 条评论 ==========")
-                            reply_count += current_reply_count  # 累加到总回复数
+                        print(f"\n========== 当前笔记评论回复完成，共回复 {current_reply_count} 条评论 ==========")
+                        reply_count += current_reply_count  # 累加到总回复数
                         
                         processed_note_count += 1  # 增加已处理笔记计数
                         processed_in_this_round = True
