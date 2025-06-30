@@ -863,16 +863,23 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                             xhs, current_note_card, keyword, email, max_comments, 
                             profile_sentence, collected_titles
                         )
-                        try:
-                            back_btn = xhs.driver.find_element(
-                                by=AppiumBy.XPATH,
-                                value="//android.widget.Button[@content-desc='返回']"
-                            )
-                            back_btn.click()
-                            print("返回上一页成功")
-                            time.sleep(0.5)
-                        except Exception as e:
-                            print(f"返回上一页失败: {str(e)}")
+                        
+                        # 统一的返回上一页处理函数
+                        def go_back_to_previous_page():
+                            try:
+                                back_btn = xhs.driver.find_element(
+                                    by=AppiumBy.XPATH,
+                                    value="//android.widget.Button[@content-desc='返回']"
+                                )
+                                back_btn.click()
+                                print("返回上一页成功")
+                                time.sleep(0.5)
+                                return True
+                            except Exception as e:
+                                print(f"返回上一页失败: {str(e)}")
+                                return False
+                        
+                        go_back_to_previous_page()
                         if result:
                             collected_notes.append(result['note_data'])
                             total_comments += result['comments_count']
@@ -958,28 +965,19 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                     print(f"执行评论回复时出错: {str(e)}")
                         else:
                             print("跳过评论回复：没有评论ID或未进行意向分析")
-                        try:
-                            back_btn = xhs.driver.find_element(
-                                by=AppiumBy.XPATH,
-                                value="//android.widget.Button[@content-desc='返回']"
-                            )
-                            back_btn.click()
-                            print("返回上一页成功")
-                            time.sleep(0.5)
-                        except Exception as e:
-                            print(f"返回上一页失败: {str(e)}")
+                        go_back_to_previous_page()
                         print(f"\n========== 当前笔记评论回复完成，共回复 {current_reply_count} 条评论 ==========")
                         reply_count += current_reply_count  # 累加到总回复数
                         
-                            processed_note_count += 1  # 增加已处理笔记计数
-                            processed_in_this_round = True
-                            break  # 处理完一个笔记后跳出循环，重新获取元素
-                        else:
-                            # 当result为None时（如元素位置过高），也要增加计数器避免无限循环
-                            print(f"笔记处理失败（可能是元素位置过高），跳过当前笔记")
-                            processed_note_count += 1  # 增加已处理笔记计数
-                            # 不设置processed_in_this_round为True，让程序继续尝试处理下一个笔记
-                            # 如果所有笔记都因位置问题被跳过，会触发滚动逻辑
+                        processed_note_count += 1  # 增加已处理笔记计数
+                        processed_in_this_round = True
+                        break  # 处理完一个笔记后跳出循环，重新获取元素
+                    else:
+                        # 当result为None时（如元素位置过高），也要增加计数器避免无限循环
+                        print(f"笔记处理失败（可能是元素位置过高），跳过当前笔记")
+                        processed_note_count += 1  # 增加已处理笔记计数
+                        # 不设置processed_in_this_round为True，让程序继续尝试处理下一个笔记
+                        # 如果所有笔记都因位置问题被跳过，会触发滚动逻辑
                     
                     # 如果本轮没有处理任何笔记，需要滚动页面获取更多内容
                     if not processed_in_this_round:
