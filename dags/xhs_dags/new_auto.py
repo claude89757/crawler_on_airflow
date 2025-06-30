@@ -922,6 +922,18 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                                     print(f"回复评论ID {comment_id} 失败")
                                                     
                                                 # 添加延迟避免操作过快
+                                                if not skip_url_open and previous_url:
+                                                    # 返回上一页
+                                                    try:
+                                                        back_btn = xhs.driver.find_element(
+                                                                by=AppiumBy.XPATH,
+                                                                value="//android.widget.Button[@content-desc='返回']"
+                                                            )
+                                                        
+                                                        back_btn.click()
+                                                        time.sleep(0.5)
+                                                    except Exception as e:
+                                                        print(f"返回上一页失败: {str(e)}")
                                                 time.sleep(random.uniform(2, 5))
                                                 
                                             except Exception as e:
