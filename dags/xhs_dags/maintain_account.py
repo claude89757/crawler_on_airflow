@@ -48,9 +48,6 @@ def browse_xhs_notes(device_index=0, **context) -> None:
     else:
         raise ValueError("email参数不能为空")
     
-    # 创建数据库连接信息，用于process_note中检查笔记是否存在
-    db_hook = BaseHook.get_connection("xhs_db").get_hook()
-    
     # 获取设备信息
     try:
         device_ip = device_info.get('device_ip')
@@ -71,7 +68,10 @@ def browse_xhs_notes(device_index=0, **context) -> None:
     try:
         # 初始化小红书操作器（带重试机制）
         xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
+        
+        # 搜索关键词，并且开始收集
         print(f"搜索关键词: {keyword}, 笔记类型: {note_type}")
+        collected_notes = [] 
         collected_titles = []
         
         if note_type == '视频':
@@ -88,7 +88,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
                     # 添加关键词信息
                     video['keyword'] = keyword
                     # 使用相同的处理函数处理视频数据
-                    process_note(video)
+                    collected_notes.append(video)
             else:
                 print(f"未找到关于 '{keyword}' 的视频笔记")
                 
@@ -103,25 +103,36 @@ def browse_xhs_notes(device_index=0, **context) -> None:
             })
             
             print(f"开始浏览图文笔记,计划浏览{max_notes}条...")
-            # 对于图文笔记，使用 get_note_card_init 函数收集
-            get_note_card(xhs, collected_notes, collected_titles, max_notes, process_note, keyword)
+            xhs.print_all_elements()
+            
+            get_note_card_init(xhs, collected_notes, collected_titles, max_notes, keyword)
 
+        
         if not collected_notes:
             print(f"未找到关于 '{keyword}' 的笔记")
             return
             
-        print(f"共浏览到 {len(collected_notes)} 条笔记")
+        # 打印收集结果
+        print("\n收集完成!")
+        print(f"共收集到 {len(collected_notes)} 条笔记")
+        
+        # 提取笔记URL列表并存入XCom
+        note_urls = [note.get('note_url', '') for note in collected_notes]
+        context['ti'].xcom_push(key='note_urls', value=note_urls)
+        context['ti'].xcom_push(key='keyword', value=keyword)
+        
+        return note_urls
             
     except Exception as e:
-        error_msg = f"收集小红书笔记失败: {str(e)}"
+        error_msg = f"浏览小红书笔记失败: {str(e)}"
         print(error_msg)
         raise
     finally:
-        # 确保关闭小红书操作器
+        # 确保关闭小红书
         if xhs:
             xhs.close()
 
-def get_note_card(xhs, collected_notes, collected_titles, max_notes, process_note, keyword):
+def get_note_card_init(xhs, collected_notes, collected_titles, max_notes, keyword):
     """
     收集小红书笔记卡片
     """
@@ -186,7 +197,7 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, process_not
                         if note_data:
                             note_data['keyword'] = keyword
                             collected_titles.append(note_title_and_text)
-                            process_note(note_data)
+                            collected_notes.append(note_data)
                         back_btn = xhs.driver.find_element( by=AppiumBy.XPATH,
                         value="//android.widget.Button[@content-desc='返回']")
                         back_btn.click()
@@ -206,7 +217,7 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, process_not
 with DAG(
     dag_id='notes_browser',
     default_args={'owner': 'yuchangongzhu', 'depends_on_past': False, 'start_date': datetime(2024, 1, 1)},
-    description='定浏览小红书笔记 (支持图文和视频)',
+    description='浏览小红书笔记 (支持图文和视频)',
     schedule_interval=None,
     tags=['小红书'],
     catchup=False,
