@@ -22,7 +22,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
         device_index: 设备索引
         **context: Airflow上下文参数字典
             - keyword: 搜索关键词
-            - max_notes: 最大浏览笔记数量
+            - browse_time: 浏览时间（分钟）
             - email: 用户邮箱
             - note_type: 笔记类型，可选值为 '图文' 或 '视频'，默认为 '图文'
     
@@ -31,7 +31,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
     """
     # 获取输入参数
     keyword = context['dag_run'].conf.get('keyword') 
-    max_notes = int(context['dag_run'].conf.get('max_notes'))
+    browse_time = int(context['dag_run'].conf.get('browse_time', 2))  # 默认浏览2分钟
     email = context['dag_run'].conf.get('email')
     note_type = context['dag_run'].conf.get('note_type')  # 默认为图文类型
     time_range = context['dag_run'].conf.get('time_range')
@@ -62,7 +62,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
     appium_server_url = f"http://{device_ip}:{appium_port}"
     
     print(f"选择设备 {device_id}, appium_server_url: {appium_server_url}")
-    print(f"开始浏览关键词 '{keyword}' 的小红书笔记... ，数量为'{max_notes}'")
+    print(f"开始浏览关键词 '{keyword}' 的小红书笔记... ，浏览时间为'{browse_time}'分钟")
     
     xhs = None
     try:
@@ -79,8 +79,8 @@ def browse_xhs_notes(device_index=0, **context) -> None:
             print(f"使用视频搜索方法搜索关键词: {keyword}")
             # search_keyword_of_video 方法内部已经处理了视频的收集和处理
             # 该方法会返回收集到的视频列表
-            print(f"开始收集视频笔记,计划收集{max_notes}条...")
-            collected_videos = xhs.search_keyword_of_video(keyword, max_videos=max_notes)
+            print(f"开始收集视频笔记...")
+            collected_videos = xhs.search_keyword_of_video(keyword)
             
             # 处理收集到的视频数据
             if collected_videos:
@@ -102,11 +102,14 @@ def browse_xhs_notes(device_index=0, **context) -> None:
                 "sort_by":sort_by
             })
             
-            print(f"开始浏览图文笔记,计划浏览{max_notes}条...--------------------------------------")
+            print(f"开始浏览图文笔记...")
             xhs.print_all_elements()
             
-            get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword)
-
+            start_time = time.time()
+            while time.time() - start_time < browse_time * 60:
+                get_note_card(xhs, collected_notes, collected_titles)
+                xhs.scroll_down()
+                time.sleep(0.5)
         
         if not collected_notes:
             print(f"未找到关于 '{keyword}' 的笔记")
@@ -127,7 +130,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
         if xhs:
             xhs.close()
 
-def get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword):
+def get_note_card(xhs, collected_notes, collected_titles):
     """
     收集小红书笔记卡片
     """
@@ -136,88 +139,80 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword):
     # 设置随机浏览的概率 (可以根据需求调整，这里设置为40%的概率会点开一篇笔记)
     browse_probability = 0.4
     
-    while len(collected_notes) < max_notes:
+    try:
+        print("获取所有笔记卡片元素")
+        note_cards = []
         try:
-            print("获取所有笔记卡片元素")
-            note_cards = []
-            try:
-                # 只保留原始方法
-                note_cards = xhs.driver.find_elements(
-                    by=AppiumBy.XPATH,
-                    value="//android.widget.FrameLayout[@resource-id='com.xingin.xhs:id/-' and @clickable='true']"
-                )
-                print(f"获取笔记卡片成功，共{len(note_cards)}个")
-            except Exception as e:
-                print(f"获取笔记卡片失败: {e}")
-            for note_card in note_cards:
-                if len(collected_notes) >= max_notes:
-                    break
-                try:
-                    title_element = note_card.find_element(
-                        by=AppiumBy.XPATH,
-                        value=".//android.widget.TextView[contains(@text, '')]"
-                    )
-                    note_title_and_text = title_element.text
-                    author_element = note_card.find_element(
-                        by=AppiumBy.XPATH,
-                        value=".//android.widget.LinearLayout/android.widget.TextView[1]"
-                    )
-                    author = author_element.text
-                    
-                    # 随机决定是否浏览这篇笔记
-                    should_browse = random.random() < browse_probability
-                    
-                    if note_title_and_text not in collected_titles and should_browse:
-                        print(f"随机选择浏览笔记: {note_title_and_text}, 作者: {author}, 当前收集数量: {len(collected_notes)}")
-                        
-                        # 获取屏幕尺寸和元素位置
-                        try:
-                            screen_size = xhs.driver.get_window_size()
-                            element_location = title_element.location
-                            screen_height = screen_size['height']
-                            element_y = element_location['y']
-                            
-                            # 检查元素是否位于屏幕高度的3/4以上
-                            if element_y > screen_height * 0.25:
-                                # 点击标题元素而不是整个卡片
-                                print(f"元素位置正常，位于屏幕{element_y/screen_height:.2%}处，执行点击")
-                                title_element.click()
-                                time.sleep(0.5)
-                            else:
-                                print(f"元素位置过高，位于屏幕{element_y/screen_height:.2%}处，跳过点击")
-                                continue
-                        except Exception as e:
-                            error_msg = str(e)
-                            print(f"检测元素位置失败: {error_msg}")
-
-                            # 默认点击标题元素
-                            # title_element.click()
-                            time.sleep(0.5)
-                        note_data = get_note_data(xhs,note_title_and_text)
-                        # time.sleep(0.5)
-                        # xhs.bypass_share()
-                        if note_data:
-                            note_data['keyword'] = keyword
-                            collected_titles.append(note_title_and_text)
-                            collected_notes.append(note_data)
-                        back_btn = xhs.driver.find_element( by=AppiumBy.XPATH,
-                        value="//android.widget.Button[@content-desc='返回']")
-                        back_btn.click()
-                        time.sleep(0.5)
-                    elif note_title_and_text not in collected_titles and not should_browse:
-                        # 记录跳过的笔记
-                        print(f"随机跳过浏览笔记: {note_title_and_text}, 作者: {author}")
-                except Exception as e:
-                    print(f"处理笔记卡片失败: {str(e)}")
-                    continue
-            if len(collected_notes) < max_notes:
-                xhs.scroll_down()
-                time.sleep(0.5)
+            # 只保留原始方法
+            note_cards = xhs.driver.find_elements(
+                by=AppiumBy.XPATH,
+                value="//android.widget.FrameLayout[@resource-id='com.xingin.xhs:id/-' and @clickable='true']"
+            )
+            print(f"获取笔记卡片成功，共{len(note_cards)}个")
         except Exception as e:
-            print(f"收集笔记失败: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
-            break
+            print(f"获取笔记卡片失败: {e}")
+        for note_card in note_cards:
+            try:
+                title_element = note_card.find_element(
+                    by=AppiumBy.XPATH,
+                    value=".//android.widget.TextView[contains(@text, '')]"
+                )
+                note_title_and_text = title_element.text
+                author_element = note_card.find_element(
+                    by=AppiumBy.XPATH,
+                    value=".//android.widget.LinearLayout/android.widget.TextView[1]"
+                )
+                author = author_element.text
+                
+                # 随机决定是否浏览这篇笔记
+                should_browse = random.random() < browse_probability
+                
+                if note_title_and_text not in collected_titles and should_browse:
+                    print(f"随机选择浏览笔记: {note_title_and_text}, 作者: {author}")
+                    
+                    # 获取屏幕尺寸和元素位置
+                    try:
+                        screen_size = xhs.driver.get_window_size()
+                        element_location = title_element.location
+                        screen_height = screen_size['height']
+                        element_y = element_location['y']
+                        
+                        # 检查元素是否位于屏幕高度的3/4以上
+                        if element_y > screen_height * 0.25:
+                            # 点击标题元素而不是整个卡片
+                            print(f"元素位置正常，位于屏幕{element_y/screen_height:.2%}处，执行点击")
+                            title_element.click()
+                            time.sleep(0.5)
+                        else:
+                            print(f"元素位置过高，位于屏幕{element_y/screen_height:.2%}处，跳过点击")
+                            continue
+                    except Exception as e:
+                        error_msg = str(e)
+                        print(f"检测元素位置失败: {error_msg}")
+
+                        # 默认点击标题元素
+                        # title_element.click()
+                        time.sleep(0.5)
+                    note_data = get_note_data(xhs,note_title_and_text)
+                    # time.sleep(0.5)
+                    # xhs.bypass_share()
+                    if note_data:
+                        collected_titles.append(note_title_and_text)
+                        collected_notes.append(note_data)
+                    back_btn = xhs.driver.find_element( by=AppiumBy.XPATH,
+                    value="//android.widget.Button[@content-desc='返回']")
+                    back_btn.click()
+                    time.sleep(0.5)
+                elif note_title_and_text not in collected_titles and not should_browse:
+                    # 记录跳过的笔记
+                    print(f"随机跳过浏览笔记: {note_title_and_text}, 作者: {author}")
+            except Exception as e:
+                print(f"处理笔记卡片失败: {str(e)}")
+                continue
+    except Exception as e:
+        print(f"收集笔记失败: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
 
 def get_note_data(xhs: XHSOperator, note_title_and_text: str):
         """
