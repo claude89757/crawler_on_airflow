@@ -131,6 +131,11 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword):
     """
     收集小红书笔记卡片
     """
+    import random  # 导入random模块用于随机选择
+    
+    # 设置随机浏览的概率 (可以根据需求调整，这里设置为40%的概率会点开一篇笔记)
+    browse_probability = 0.4
+    
     while len(collected_notes) < max_notes:
         try:
             print("获取所有笔记卡片元素")
@@ -158,8 +163,12 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword):
                         value=".//android.widget.LinearLayout/android.widget.TextView[1]"
                     )
                     author = author_element.text
-                    if note_title_and_text not in collected_titles:
-                        print(f"收集笔记: {note_title_and_text}, 作者: {author}, 当前收集数量: {len(collected_notes)}")
+                    
+                    # 随机决定是否浏览这篇笔记
+                    should_browse = random.random() < browse_probability
+                    
+                    if note_title_and_text not in collected_titles and should_browse:
+                        print(f"随机选择浏览笔记: {note_title_and_text}, 作者: {author}, 当前收集数量: {len(collected_notes)}")
                         
                         # 获取屏幕尺寸和元素位置
                         try:
@@ -195,6 +204,9 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, keyword):
                         value="//android.widget.Button[@content-desc='返回']")
                         back_btn.click()
                         time.sleep(0.5)
+                    elif note_title_and_text not in collected_titles and not should_browse:
+                        # 记录跳过的笔记
+                        print(f"随机跳过浏览笔记: {note_title_and_text}, 作者: {author}")
                 except Exception as e:
                     print(f"处理笔记卡片失败: {str(e)}")
                     continue
