@@ -851,6 +851,14 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                          # 提取笔记URL列表
                         note_urls = [note.get('note_url', '') for note in collected_notes if note.get('note_url', '')]
                         
+                        if result:
+                            collected_notes.append(result['note_data'])
+                            total_comments += result['comments_count']
+                            all_comment_ids.extend(result['comment_ids'])
+                            all_analysis_results.extend(result['analysis_results'])
+                            
+                            print(f"完成笔记处理，当前进度: {len(collected_notes)}/{max_notes}")
+                            print(f"累计评论数: {total_comments}，累计评论ID数: {len(all_comment_ids)}")
                         # 执行评论回复逻辑
                         reply_count = 0
                         if all_comment_ids:  # 只有在有评论ID时才执行回复
@@ -930,14 +938,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         print(f"\n========== 评论回复完成，共回复 {reply_count} 条评论 ==========")
                         
                         
-                        if result:
-                            collected_notes.append(result['note_data'])
-                            total_comments += result['comments_count']
-                            all_comment_ids.extend(result['comment_ids'])
-                            all_analysis_results.extend(result['analysis_results'])
-                            
-                            print(f"完成笔记处理，当前进度: {len(collected_notes)}/{max_notes}")
-                            print(f"累计评论数: {total_comments}，累计评论ID数: {len(all_comment_ids)}")
+                        
                     
                     # 如果还没收集够，滚动页面
                     if len(collected_notes) < max_notes:
