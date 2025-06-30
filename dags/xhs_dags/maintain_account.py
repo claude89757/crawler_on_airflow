@@ -426,7 +426,7 @@ with DAG(
     schedule_interval=None,
     tags=['小红书'],
     catchup=False,
-    max_active_runs=2,
+    max_active_runs=5,
 ) as dag:
 
     for index in range(10):
@@ -437,7 +437,7 @@ with DAG(
                 'device_index': index,
             },
             provide_context=True,
-            retries=3,
+            retries=2,
             retry_delay=timedelta(seconds=10)
         
         )
