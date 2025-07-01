@@ -875,6 +875,7 @@ def     collect_notes_and_comments_immediately(device_index: int = 0,**context):
         total_comments = 0
         all_comment_ids = []
         all_analysis_results = []
+        reply_count = 0  # 初始化回复计数器
         
         # 搜索关键词
         print(f"搜索关键词: {keyword}, 笔记类型: {note_type}")
