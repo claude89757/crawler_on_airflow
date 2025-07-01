@@ -928,7 +928,16 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                             except Exception as e:
                                                 print(f"回复评论时出错: {str(e)}")
                                                 continue
-                                        
+                                        # try:
+                                        #     back_btn = xhs.driver.find_element(
+                                        #             by=AppiumBy.XPATH,
+                                        #             value="//android.widget.Button[@content-desc='返回']"
+                                        #         )
+                                            
+                                        #     back_btn.click()
+                                        #     time.sleep(3)
+                                        # except Exception as e:
+                                        #     print(f"返回上一页失败: {str(e)}")
                                     else:
                                         print("没有找到需要回复的高/中意向评论")
                                         
@@ -940,16 +949,16 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         print(f"\n========== 评论回复完成，共回复 {reply_count} 条评论 ==========")
                     
                         # 返回上一页
-                    try:
-                        back_btn = xhs.driver.find_element(
-                                by=AppiumBy.XPATH,
-                                value="//android.widget.Button[@content-desc='返回']"
-                            )
-                        
-                        back_btn.click()
-                        time.sleep(3)
-                    except Exception as e:
-                        print(f"返回上一页失败: {str(e)}")
+                        try:
+                            back_btn = xhs.driver.find_element(
+                                    by=AppiumBy.XPATH,
+                                    value="//android.widget.Button[@content-desc='返回']"
+                                )
+                            print("返回上一页...")
+                            back_btn.click()
+                            time.sleep(3)
+                        except Exception as e:
+                            print(f"返回上一页失败: {str(e)}")
 
                     # 如果还没收集够，滚动页面
                     if len(collected_notes) < max_notes:
