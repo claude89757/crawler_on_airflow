@@ -2209,7 +2209,7 @@ class XHSOperator:
                                         if closest_author:
                                             author = closest_author.text.strip()
                                             if author==origin_author or author=="作者":
-                                                continue;
+                                                continue
                                             if not author:
                                                 print("找到的作者元素文本为空")
                                                 author = "未知作者"

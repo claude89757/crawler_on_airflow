@@ -585,6 +585,32 @@ def save_comments_to_db(comments, note_url, keyword=None, email=None):
         cursor.close()
         db_conn.close()
 
+def get_author_by_url(note_url: str):
+    """根据笔记URL从数据库获取作者
+    Args:
+        note_url: 笔记URL
+    Returns:
+        str: 作者名称，如果未找到则返回None
+    """
+    try:
+        db_hook = BaseHook.get_connection("xhs_db").get_hook()
+        db_conn = db_hook.get_conn()
+        cursor = db_conn.cursor()
+        
+        # 查询笔记作者
+        cursor.execute("SELECT author FROM xhs_notes WHERE note_url = %s", (note_url,))
+        result = cursor.fetchone()
+        
+        cursor.close()
+        db_conn.close()
+        
+        if result:
+            return result[0]  # 返回作者名称
+        return None
+    except Exception as e:
+        print(f"获取作者信息失败: {str(e)}")
+        return None
+
 
 def collect_note_and_comments_immediately(xhs, note_card, keyword, email, max_comments, profile_sentence, collected_titles):
     """
@@ -674,8 +700,10 @@ def collect_note_and_comments_immediately(xhs, note_card, keyword, email, max_co
         analysis_results = []
         
         try:
+            origin_author = get_author_by_url(note_data['note_url'])
+            print(f"获取到笔记作者: {origin_author if origin_author else '未知'}")
             # 收集评论
-            comments = xhs.collect_comments_by_url('', max_comments=max_comments)
+            comments = xhs.collect_comments_by_url('', max_comments=max_comments,origin_author=origin_author)
             
             if comments:
                 # 保存评论到数据库
