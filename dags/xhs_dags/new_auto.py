@@ -719,7 +719,7 @@ def collect_note_and_comments_immediately(xhs, note_card, keyword, email, max_co
         
         # 记录已收集的标题
         collected_titles.append(note_title_and_text)
-        
+        print(f"已收集的笔记: {collected_titles}")
         return {
             'note_data': note_data,
             'comments_count': len(comments),
@@ -879,6 +879,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                         
                                         # 执行回复逻辑
                                         previous_url = None  # 跟踪上一个处理的URL
+                                        
                                         for comment_result in high_intent_comments:
                                             
                                             try:
@@ -894,8 +895,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                                 if has_image:
                                                     print('图片url:',image_urls)
                                                     cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
-                                
-                                            
+
                                                 # 执行回复（这里使用现有的XHS操作器）
                                                 success = xhs.comments_reply(
                                                     comment_result.get('note_url', ''),
@@ -905,6 +905,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                                     has_image=has_image,
                                                     skip_url_open=skip_url_open
                                                 )
+                                                
                                                 previous_url = comment_result.get('note_url', '')
                                                 if success:
                                                     # 记录回复到数据库
@@ -928,38 +929,27 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                             except Exception as e:
                                                 print(f"回复评论时出错: {str(e)}")
                                                 continue
-                                        try:
-                                            back_btn = xhs.driver.find_element(
-                                                    by=AppiumBy.XPATH,
-                                                    value="//android.widget.Button[@content-desc='返回']"
-                                                )
-                                            
-                                            back_btn.click()
-                                            time.sleep(3)
-                                        except Exception as e:
-                                            print(f"返回上一页失败: {str(e)}")
-
+                                        print(f"\n========== 评论回复完成，共回复 {reply_count} 条评论 ==========")
                                     else:
                                         print("没有找到需要回复的高/中意向评论")
                                         
                             except Exception as e:
                                 print(f"执行评论回复时出错: {str(e)}")
+                            try:
+                                back_btn = xhs.driver.find_element(
+                                        by=AppiumBy.XPATH,
+                                        value="//android.widget.Button[@content-desc='返回']"
+                                    )
+                                print("返回上一页...")
+                                back_btn.click()
+                                time.sleep(3)
+                            except Exception as e:
+                                print(f"返回上一页失败: {str(e)}")
                         else:
                             print("跳过评论回复：没有评论ID或未进行意向分析")
                             
-                        print(f"\n========== 评论回复完成，共回复 {reply_count} 条评论 ==========")
+                       
                     
-                        # 返回上一页
-                        try:
-                            back_btn = xhs.driver.find_element(
-                                    by=AppiumBy.XPATH,
-                                    value="//android.widget.Button[@content-desc='返回']"
-                                )
-                            print("返回上一页...")
-                            back_btn.click()
-                            time.sleep(3)
-                        except Exception as e:
-                            print(f"返回上一页失败: {str(e)}")
 
                     # 如果还没收集够，滚动页面
                     if len(collected_notes) < max_notes:
