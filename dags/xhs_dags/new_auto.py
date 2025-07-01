@@ -836,121 +836,149 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                     except Exception as e:
                         print(f"获取笔记卡片失败: {e}")
                         break
+                    # 检查所有标题是否都已在收集列表中
+                    all_titles_collected = True
+                    for note_card in note_cards:
+                        try:
+                            title_element = note_card.find_element(
+                                by=AppiumBy.XPATH,
+                                value=".//android.widget.TextView[contains(@text, '')]"
+                            )
+                            note_title_and_text = title_element.text
+                            if note_title_and_text not in collected_titles:
+                                all_titles_collected = False
+                                break
+                        except Exception as e:
+                            print(f"获取标题失败: {e}")
+                            all_titles_collected = False
+                            break
+                    
+                    # 如果所有标题都已收集，则滑动页面
+                    if all_titles_collected:
+                        print("所有可见笔记标题都已在收集列表中，滑动页面获取新内容...")
+                        xhs.scroll_down()
+                        time.sleep(2)
+                        continue
                     
                     # 处理每个笔记卡片
                     for note_card in note_cards:
-                        if len(collected_notes) >= max_notes:
-                            break
-                        
-                        # 收集笔记和评论
-                        result = collect_note_and_comments_immediately(
-                            xhs, note_card, keyword, email, max_comments, 
-                            profile_sentence, collected_titles
+                        title_element = note_card.find_element(
+                            by=AppiumBy.XPATH,
+                            value=".//android.widget.TextView[contains(@text, '')]"
                         )
-                        
-                         # 提取笔记URL列表
-                        note_urls = [note.get('note_url', '') for note in collected_notes if note.get('note_url', '')]
-                        
-                        if result:
-                            collected_notes.append(result['note_data'])
-                            total_comments += result['comments_count']
-                            all_comment_ids.extend(result['comment_ids'])
-                            all_analysis_results.extend(result['analysis_results'])
+                        note_title_and_text = title_element.text
+                        if note_title_and_text not in collected_titles:
+                            if len(collected_notes) >= max_notes:
+                                break
                             
-                            print(f"完成笔记处理，当前进度: {len(collected_notes)}/{max_notes}")
-                            print(f"累计评论数: {total_comments}，累计评论ID数: {len(all_comment_ids)}")
-                        # 执行评论回复逻辑
-                        reply_count = 0
-                        if all_comment_ids:  # 只有在有评论ID时才执行回复
-                            print("\n========== 开始执行评论回复 ==========")
-                            try:
-                                # 获取回复模板
-                                templates = get_reply_templates_from_db(email=email)
-                                if not templates:
-                                    print("没有找到可用的回复模板，跳过评论回复")
-                                else:
-                                    print(f"找到 {len(templates)} 个回复模板")
-                                    
-                                    # 获取高意向和中意向的评论进行回复
-                                    # high_intent_comments = [result for result in all_analysis_results if result.get('intent') in ['高意向', '中意向']]
-                                    high_intent_comments=all_analysis_results
-                                    if high_intent_comments:
-                                        print(f"找到 {len(high_intent_comments)} 条高/中意向评论需要回复")
-                                        
-                                        # 执行回复逻辑
-                                        previous_url = None  # 跟踪上一个处理的URL
-                                        
-                                        for comment_result in high_intent_comments:
-                                            
-                                            try:
-                                                template = random.choice(templates)
-                                                template_content = template.get('content', '')
-                                                
-                                                comment_id = comment_result.get('id')
-                                                if not comment_id:
-                                                    continue
-                                                skip_url_open = (previous_url == comment_result.get('note_url', ''))
-                                                image_urls = template['image_urls']
-                                                has_image = image_urls is not None and image_urls != "null" and image_urls != ""
-                                                if has_image:
-                                                    print('图片url:',image_urls)
-                                                    cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
-
-                                                # 执行回复（这里使用现有的XHS操作器）
-                                                success = xhs.comments_reply(
-                                                    comment_result.get('note_url', ''),
-                                                    comment_result.get('author', ''),
-                                                    comment_content=comment_result.get('content', ''),
-                                                    reply_content=template_content,
-                                                    has_image=has_image,
-                                                    skip_url_open=skip_url_open
-                                                )
-                                                
-                                                previous_url = comment_result.get('note_url', '')
-                                                if success:
-                                                    # 记录回复到数据库
-                                                    insert_manual_reply(
-                                                    comment_id=comment_id,
-                                                    note_url=comment_result.get('note_url', ''),
-                                                    author=comment_result.get('author', ''),
-                                                    userInfo=email,
-                                                    content=comment_result.get('content', ''),
-                                                    reply=template_content
-                                                    )
-                                                    reply_count += 1
-                                                    print(f"成功回复评论ID: {comment_id}，内容: {template_content[:50]}...")
-                                                else:
-                                                    print(f"回复评论ID {comment_id} 失败")
-                                                    
-                                                # 添加延迟避免操作过快
-                                                
-                                                time.sleep(random.uniform(2, 5))
-                                                
-                                            except Exception as e:
-                                                print(f"回复评论时出错: {str(e)}")
-                                                continue
-                                        print(f"\n========== 评论回复完成，共回复 {reply_count} 条评论 ==========")
+                            # 收集笔记和评论
+                            result = collect_note_and_comments_immediately(
+                                xhs, note_card, keyword, email, max_comments, 
+                                profile_sentence, collected_titles
+                            )
+                            
+                            # 提取笔记URL列表
+                            note_urls = [note.get('note_url', '') for note in collected_notes if note.get('note_url', '')]
+                            
+                            if result:
+                                collected_notes.append(result['note_data'])
+                                total_comments += result['comments_count']
+                                all_comment_ids.extend(result['comment_ids'])
+                                all_analysis_results.extend(result['analysis_results'])
+                                
+                                print(f"完成笔记处理，当前进度: {len(collected_notes)}/{max_notes}")
+                                print(f"累计评论数: {total_comments}，累计评论ID数: {len(all_comment_ids)}")
+                            # 执行评论回复逻辑
+                            reply_count = 0
+                            if all_comment_ids:  # 只有在有评论ID时才执行回复
+                                print("\n========== 开始执行评论回复 ==========")
+                                try:
+                                    # 获取回复模板
+                                    templates = get_reply_templates_from_db(email=email)
+                                    if not templates:
+                                        print("没有找到可用的回复模板，跳过评论回复")
                                     else:
-                                        print("没有找到需要回复的高/中意向评论")
+                                        print(f"找到 {len(templates)} 个回复模板")
                                         
-                            except Exception as e:
-                                print(f"执行评论回复时出错: {str(e)}")
-                            try:
-                                back_btn = xhs.driver.find_element(
-                                        by=AppiumBy.XPATH,
-                                        value="//android.widget.Button[@content-desc='返回']"
-                                    )
-                                print("返回上一页...")
-                                back_btn.click()
-                                time.sleep(3)
-                            except Exception as e:
-                                print(f"返回上一页失败: {str(e)}")
-                        else:
-                            print("跳过评论回复：没有评论ID或未进行意向分析")
-                            
-                       
-                    
+                                        # 获取高意向和中意向的评论进行回复
+                                        # high_intent_comments = [result for result in all_analysis_results if result.get('intent') in ['高意向', '中意向']]
+                                        high_intent_comments=all_analysis_results
+                                        if high_intent_comments:
+                                            print(f"找到 {len(high_intent_comments)} 条高/中意向评论需要回复")
+                                            
+                                            # 执行回复逻辑
+                                            previous_url = None  # 跟踪上一个处理的URL
+                                            
+                                            for comment_result in high_intent_comments:
+                                                
+                                                try:
+                                                    template = random.choice(templates)
+                                                    template_content = template.get('content', '')
+                                                    
+                                                    comment_id = comment_result.get('id')
+                                                    if not comment_id:
+                                                        continue
+                                                    skip_url_open = (previous_url == comment_result.get('note_url', ''))
+                                                    image_urls = template['image_urls']
+                                                    has_image = image_urls is not None and image_urls != "null" and image_urls != ""
+                                                    if has_image:
+                                                        print('图片url:',image_urls)
+                                                        cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
 
+                                                    # 执行回复（这里使用现有的XHS操作器）
+                                                    success = xhs.comments_reply(
+                                                        comment_result.get('note_url', ''),
+                                                        comment_result.get('author', ''),
+                                                        comment_content=comment_result.get('content', ''),
+                                                        reply_content=template_content,
+                                                        has_image=has_image,
+                                                        skip_url_open=skip_url_open
+                                                    )
+                                                    
+                                                    previous_url = comment_result.get('note_url', '')
+                                                    if success:
+                                                        # 记录回复到数据库
+                                                        insert_manual_reply(
+                                                        comment_id=comment_id,
+                                                        note_url=comment_result.get('note_url', ''),
+                                                        author=comment_result.get('author', ''),
+                                                        userInfo=email,
+                                                        content=comment_result.get('content', ''),
+                                                        reply=template_content
+                                                        )
+                                                        reply_count += 1
+                                                        print(f"成功回复评论ID: {comment_id}，内容: {template_content[:50]}...")
+                                                    else:
+                                                        print(f"回复评论ID {comment_id} 失败")
+                                                        
+                                                    # 添加延迟避免操作过快
+                                                    
+                                                    time.sleep(random.uniform(2, 5))
+                                                    
+                                                except Exception as e:
+                                                    print(f"回复评论时出错: {str(e)}")
+                                                    continue
+                                            print(f"\n========== 评论回复完成，共回复 {reply_count} 条评论 ==========")
+                                        else:
+                                            print("没有找到需要回复的高/中意向评论")
+                                            
+                                except Exception as e:
+                                    print(f"执行评论回复时出错: {str(e)}")
+                                try:
+                                    back_btn = xhs.driver.find_element(
+                                            by=AppiumBy.XPATH,
+                                            value="//android.widget.Button[@content-desc='返回']"
+                                        )
+                                    print("返回上一页...")
+                                    back_btn.click()
+                                    time.sleep(3)
+                                except Exception as e:
+                                    print(f"返回上一页失败: {str(e)}")
+                            else:
+                                print("跳过评论回复：没有评论ID或未进行意向分析")
+                        else:
+                            print(f"笔记已经处理过，跳过采集和评论逻辑: {note_title_and_text}")
+                       
                     # 如果还没收集够，滚动页面
                     if len(collected_notes) < max_notes:
                         print("滚动页面获取更多笔记...")
