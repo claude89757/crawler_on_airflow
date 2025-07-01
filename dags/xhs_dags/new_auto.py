@@ -892,8 +892,8 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                 if template_ids :
                     # 如果提供了template_ids，则过滤回复模板，只保留在template_ids中的模板
                     print(f"过滤回复模板，只保留ID在 {template_ids} 中的模板")
-                    reply_templates=[item for item in reply_templates if item["id"] in template_ids]
-                    print(f"过滤后的回复模板: {reply_templates}")
+                    templates=[item for item in templates if item["id"] in template_ids]
+                    print(f"过滤后的回复模板: {templates}")
                 if not templates:
                     print("没有找到可用的回复模板，跳过评论回复")
                 else:
@@ -920,6 +920,12 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 comment_id = comment_result.get('id')
                                 if not comment_id:
                                     continue
+                                
+                                # 检查评论内容是否为空，如果为空则跳过回复
+                                comment_content = comment_result.get('content', '')
+                                if not comment_content or not comment_content.strip():
+                                    print(f"跳过空评论ID: {comment_id}")
+                                    continue
                                     
                                 current_url = comment_result.get('note_url', '')
                                 skip_url_open = (previous_url == current_url)
@@ -941,7 +947,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 success = xhs.comments_reply(
                                     current_url,
                                     comment_result.get('author', ''),
-                                    comment_content=comment_result.get('content', ''),
+                                    comment_content=comment_content,
                                     reply_content=template_content,
                                     has_image=has_image,
                                     skip_url_open=skip_url_open
@@ -954,7 +960,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                         note_url=current_url,
                                         author=comment_result.get('author', ''),
                                         userInfo=email,
-                                        content=comment_result.get('content', ''),
+                                        content=comment_content,
                                         reply=template_content
                                     )
                                     reply_count += 1
