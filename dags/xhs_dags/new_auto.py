@@ -928,16 +928,17 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                             except Exception as e:
                                                 print(f"回复评论时出错: {str(e)}")
                                                 continue
-                                        # try:
-                                        #     back_btn = xhs.driver.find_element(
-                                        #             by=AppiumBy.XPATH,
-                                        #             value="//android.widget.Button[@content-desc='返回']"
-                                        #         )
+                                        try:
+                                            back_btn = xhs.driver.find_element(
+                                                    by=AppiumBy.XPATH,
+                                                    value="//android.widget.Button[@content-desc='返回']"
+                                                )
                                             
-                                        #     back_btn.click()
-                                        #     time.sleep(3)
-                                        # except Exception as e:
-                                        #     print(f"返回上一页失败: {str(e)}")
+                                            back_btn.click()
+                                            time.sleep(3)
+                                        except Exception as e:
+                                            print(f"返回上一页失败: {str(e)}")
+
                                     else:
                                         print("没有找到需要回复的高/中意向评论")
                                         
