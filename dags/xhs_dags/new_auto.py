@@ -719,51 +719,53 @@ def collect_note_and_comments_immediately(xhs, note_card, keyword, email, max_co
                                     
                                     # 执行回复逻辑
                                     for comment_result in high_intent_comments:
-                                        try:
-                                            template = random.choice(templates)
-                                            template_content = template.get('content', '')
-                                            
-                                            comment_id = comment_result.get('id')
-                                            if not comment_id:
-                                                continue
+                                        if comment_result.get('content', '')!= '':
+                                            print(f"正在处理评论ID: {comment_result.get('id')}, 内容: {comment_result.get('content', '')[:50]}...")
+                                            try:
+                                                template = random.choice(templates)
+                                                template_content = template.get('content', '')
                                                 
-                                            image_urls = template['image_urls']
-                                            has_image = image_urls is not None and image_urls != "null" and image_urls != ""
-                                            if has_image:
-                                                print('图片url:', image_urls)
-                                                cos_to_device_via_host(cos_url=image_urls, host_address=device_ip, host_username=username, device_id=device_id, host_password=password, host_port=host_port)
+                                                comment_id = comment_result.get('id')
+                                                if not comment_id:
+                                                    continue
+                                                    
+                                                image_urls = template['image_urls']
+                                                has_image = image_urls is not None and image_urls != "null" and image_urls != ""
+                                                if has_image:
+                                                    print('图片url:', image_urls)
+                                                    cos_to_device_via_host(cos_url=image_urls, host_address=device_ip, host_username=username, device_id=device_id, host_password=password, host_port=host_port)
 
-                                            # 执行回复
-                                            success = xhs.comments_reply(
-                                                comment_result.get('note_url', ''),
-                                                comment_result.get('author', ''),
-                                                comment_content=comment_result.get('content', ''),
-                                                reply_content=template_content,
-                                                has_image=has_image,
-                                                skip_url_open=True  # 因为已经在笔记页面内，跳过URL打开
-                                            )
-                                            
-                                            if success:
-                                                # 记录回复到数据库
-                                                insert_manual_reply(
-                                                    comment_id=comment_id,
-                                                    note_url=comment_result.get('note_url', ''),
-                                                    author=comment_result.get('author', ''),
-                                                    userInfo=email,
-                                                    content=comment_result.get('content', ''),
-                                                    reply=template_content
+                                                # 执行回复
+                                                success = xhs.comments_reply(
+                                                    comment_result.get('note_url', ''),
+                                                    comment_result.get('author', ''),
+                                                    comment_content=comment_result.get('content', ''),
+                                                    reply_content=template_content,
+                                                    has_image=has_image,
+                                                    skip_url_open=True  # 因为已经在笔记页面内，跳过URL打开
                                                 )
-                                                reply_count += 1
-                                                print(f"成功回复评论ID: {comment_id}，内容: {template_content[:50]}...")
-                                            else:
-                                                print(f"回复评论ID {comment_id} 失败")
                                                 
-                                            # 添加延迟避免操作过快
-                                            time.sleep(random.uniform(2, 5))
-                                            
-                                        except Exception as e:
-                                            print(f"回复评论时出错: {str(e)}")
-                                            continue
+                                                if success:
+                                                    # 记录回复到数据库
+                                                    insert_manual_reply(
+                                                        comment_id=comment_id,
+                                                        note_url=comment_result.get('note_url', ''),
+                                                        author=comment_result.get('author', ''),
+                                                        userInfo=email,
+                                                        content=comment_result.get('content', ''),
+                                                        reply=template_content
+                                                    )
+                                                    reply_count += 1
+                                                    print(f"成功回复评论ID: {comment_id}，内容: {template_content[:50]}...")
+                                                else:
+                                                    print(f"回复评论ID {comment_id} 失败")
+                                                    
+                                                # 添加延迟避免操作过快
+                                                time.sleep(random.uniform(2, 5))
+                                                
+                                            except Exception as e:
+                                                print(f"回复评论时出错: {str(e)}")
+                                                continue
                                     
                                     print(f"\n========== 评论回复完成，共回复 {reply_count} 条评论 ==========\n")
                                 else:
