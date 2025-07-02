@@ -23,7 +23,7 @@ from airflow.models import Variable
 from appium.webdriver.webdriver import WebDriver as AppiumWebDriver
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
-from xhs_element_utils import XhsElementUtils
+
 from selenium.webdriver.support import expected_conditions as EC
 from appium.options.android import UiAutomator2Options
 from airflow.models.variable import Variable
