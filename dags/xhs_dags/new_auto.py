@@ -532,7 +532,8 @@ def save_comments_to_db(comments, note_url, keyword=None, email=None):
             keyword VARCHAR(255) NOT NULL,
             comment_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             collect_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            location TEXT
+            location TEXT,
+            note_type TEXT
         )
         """)
         db_conn.commit()

@@ -470,11 +470,11 @@ def collect_comments_processor(task: Dict, device_info: Dict, xhs: XHSOperator, 
     while retry_count < max_retries:
         try:
             # 获取完整URL（处理短链接）
-            if len(note_url) == 34:  # 链接长度34则为短链接
-                full_url = xhs.get_redirect_url(note_url)
-                print(f"处理笔记URL: {full_url}")
-            else:
-                full_url = note_url #长链不需要处理直接使用
+            # if len(note_url) == 34:  # 链接长度34则为短链接
+            #     full_url = xhs.get_redirect_url(note_url)
+            #     print(f"处理笔记URL: {full_url}")
+            # else:
+            full_url = note_url #长链不需要处理直接使用
 
             # 收集评论
             comments = xhs.collect_comments_by_url(full_url)

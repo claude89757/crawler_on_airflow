@@ -9,13 +9,13 @@ import base64
 from utils.xhs_appium import XHSOperator
 import time
 xhs = None
-  
-def get_note_url(keyword: str = None, **context):
-    """从数据库获取笔记URL和关键词
+
+def get_video_url(keyword: str = None, **context):
+    """从数据库获取视频URL和关键词
     Args:
         keyword: 筛选的关键词
     Returns:
-        包含note_url和keyword的字典列表
+        包含video_url和keyword的字典列表
     """
     # 使用get_hook函数获取数据库连接
     db_hook = BaseHook.get_connection("xhs_db").get_hook()
@@ -24,41 +24,16 @@ def get_note_url(keyword: str = None, **context):
     
     # 根据是否有关键词来构建不同的SQL查询
     if keyword:
-        cursor.execute("SELECT note_url, keyword FROM xhs_notes WHERE keyword = %s", (keyword,))
+        cursor.execute("SELECT note_url, keyword FROM xhs_notes WHERE keyword = %s and note_type = '视频'", (keyword,))
     else:
-        cursor.execute("SELECT note_url, keyword FROM xhs_notes")
+        cursor.execute("SELECT note_url, keyword FROM xhs_notes WHERE note_type = '视频'")
     results = [{'note_url': row[0], 'keyword': row[1]} for row in cursor.fetchall()]
-    
+
     cursor.close()
     db_conn.close()
     
     return results
 
-def get_author_by_url(note_url: str):
-    """根据笔记URL从数据库获取作者
-    Args:
-        note_url: 笔记URL
-    Returns:
-        str: 作者名称，如果未找到则返回None
-    """
-    try:
-        db_hook = BaseHook.get_connection("xhs_db").get_hook()
-        db_conn = db_hook.get_conn()
-        cursor = db_conn.cursor()
-        
-        # 查询笔记作者
-        cursor.execute("SELECT author FROM xhs_notes WHERE note_url = %s", (note_url,))
-        result = cursor.fetchone()
-        
-        cursor.close()
-        db_conn.close()
-        
-        if result:
-            return result[0]  # 返回作者名称
-        return None
-    except Exception as e:
-        print(f"获取作者信息失败: {str(e)}")
-        return None
 
 def save_comments_to_db(comments: list, note_url: str, keyword: str = None, email: str = None):
     """保存评论到数据库
@@ -84,7 +59,8 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
             keyword VARCHAR(255) NOT NULL,
             comment_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             collect_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            location TEXT
+            location TEXT,
+            note_type TEXT
         )
         """)
         db_conn.commit()
@@ -92,8 +68,8 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
         # 准备插入数据的SQL语句
         insert_sql = """
         INSERT INTO xhs_comments 
-        (note_url, author, userInfo, content, likes, keyword, comment_time, collect_time, location) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (note_url, author, userInfo, content, likes, keyword, comment_time, collect_time, location,note_type) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s)
         """
         
         # 批量插入评论数据
@@ -178,19 +154,15 @@ def get_notes_by_url_list(note_urls: list, keyword: str = None, device_index: in
         total_comments = 0
         for note_url in note_urls:
             try:
-                # # 收集评论
+                # 收集评论
                 # if len(note_url) == 34:  # 链接长度34则为短链接
                 #     full_url = xhs.get_redirect_url(note_url)
                 #     print(f"处理笔记URL: {full_url}")
                 # else:
                 #     full_url = note_url  # 长链不需要处理直接使用
 
-                # 获取笔记作者
-                origin_author = get_author_by_url(note_url)
-                print(f"获取到笔记作者: {origin_author if origin_author else '未知'}")
-                
                 # 收集评论，传递原作者信息
-                comments = xhs.collect_comments_by_url(note_url, max_comments=max_comments, origin_author=origin_author)
+                comments = xhs.collect_video_comments(note_url, max_comments=max_comments)
                 # 保存评论到数据库
                 if comments:
                     save_comments_to_db(comments, note_url, keyword, email)
@@ -212,7 +184,7 @@ def get_notes_by_url_list(note_urls: list, keyword: str = None, device_index: in
             except Exception as e:
                 print(f"关闭XHSOperator时出错: {e}")
 
-def collect_xhs_comments(device_index: int = 0, **context):
+def collect_video_comments(device_index: int = 0, **context):
     """收集小红书评论
     Args:
         device_index: 设备索引
@@ -250,8 +222,8 @@ def collect_xhs_comments(device_index: int = 0, **context):
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个笔记URL进行收集")
         return get_notes_by_url_list(device_urls, keyword, device_index, email,max_comments)
     else:
-        # 从数据库获取笔记URL和关键词
-        notes_data = get_note_url(keyword)
+        # 从数据库获取视频URL和关键词
+        notes_data = get_video_url(keyword)
         # 提取URL列表
         all_note_urls = [note['note_url'] for note in notes_data]
         # 分配URL给当前设备
@@ -308,7 +280,7 @@ with DAG(
     for index in range(10):
         PythonOperator(
             task_id=f'collect_xhs_comments_{index}',
-            python_callable=collect_xhs_comments,
+            python_callable=collect_video_comments,
             op_kwargs={
                 'device_index': index,
             },
