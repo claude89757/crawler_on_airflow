@@ -1993,7 +1993,8 @@ class XHSOperator:
 
             print(f"开始获取并解析评论，帖子 URL: {full_url}")
             #检查笔记是否存在
-            note_status=self.is_note_404(full_url)
+            # note_status=self.is_note_404(full_url)
+            note_status=False
             # 打开帖子页面
             if not note_status or full_url == "":
                 if full_url!='':
@@ -2365,7 +2366,8 @@ class XHSOperator:
 
             print(f"开始获取并解析视频评论，帖子 URL: {full_url}")
             #检查笔记是否存在
-            note_status=self.is_note_404(full_url)
+            # note_status=self.is_note_404(full_url)
+            note_status=False
             # 打开帖子页面
             if not note_status or full_url == "":
                 if full_url!='':
@@ -2701,7 +2703,8 @@ class XHSOperator:
             #     print(f"处理笔记URL: {full_url}")
             # else:
             full_url = note_url #长连不需要处理直接使用
-            note_status=self.is_note_404(full_url)
+            # note_status=self.is_note_404(full_url)
+            note_status=False
             # 打开帖子页面
             if not note_status:
                 # 只有在不跳过URL打开时才重新打开笔记
