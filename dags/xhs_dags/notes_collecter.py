@@ -69,7 +69,7 @@ def save_notes_to_db(notes: list) -> None:
                 note.get('likes', 0),
                 note.get('collects', 0),
                 note.get('comments', 0),
-                note_url,  # 使用统一处理后的URL
+                note_url.replace(' 复制本条信息','').strip(),  # 使用统一处理后的URL
                 note.get('collect_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
                 note.get('note_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
                 note.get('note_type', ''),
