@@ -19,6 +19,8 @@ import time
 import subprocess
 import random
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import re
 from airflow.models import Variable
 
