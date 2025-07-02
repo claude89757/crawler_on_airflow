@@ -263,7 +263,7 @@ def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
    
 # DAG 定义
 with DAG(
-    dag_id='comments_collector',
+    dag_id='collect_video_comments',
     default_args={
         'owner': 'yuchangongzhu', 
         'depends_on_past': False, 
