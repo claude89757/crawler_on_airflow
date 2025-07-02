@@ -1894,23 +1894,6 @@ class XHSOperator:
         print("根节点")
         print_element(root)
     
-    def _is_valid_comment_text(self, text: str) -> bool:
-        """
-        验证文本是否为有效的评论内容
-        """
-        return XhsElementUtils._is_valid_comment_text(text)
-    
-    def _is_valid_author_name(self, text: str) -> bool:
-        """
-        验证文本是否为有效的作者名
-        """
-        return XhsElementUtils._is_valid_author_name(text)
-    
-    def _parse_number_with_unit(self, text: str) -> int:
-        """
-        解析带单位的数字文本
-        """
-        return XhsElementUtils._parse_number_with_unit(text)
     
     def close(self):
         """
