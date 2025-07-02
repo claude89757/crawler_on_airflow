@@ -1954,7 +1954,7 @@ class XHSOperator:
         发布笔记
         """
         pass
-    def get_redirect_url_with_retry(self, short_url: str, max_retries: int = 3) :
+    def get_redirect_url(self, short_url: str, max_retries: int = 3) :
         """
         带重试机制的重定向URL获取
         """
