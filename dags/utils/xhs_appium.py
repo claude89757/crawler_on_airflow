@@ -10,6 +10,8 @@
 Author: claude89757
 Date: 2025-01-09
 """
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from datetime import datetime, timedelta
 import os
 import json
@@ -1950,25 +1952,65 @@ class XHSOperator:
         发布笔记
         """
         pass
-    def get_redirect_url(self, short_url):
-        try:
-            # 添加请求头，模拟浏览器请求
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Connection": "keep-alive",
-            }
-            # 发送请求，禁止自动重定向
-            response = requests.get(short_url, headers=headers, allow_redirects=False)
-            # 检查响应状态码
-            if response.status_code in [301, 302, 307]:  # 处理重定向状态码
-                redirect_url = response.headers['Location']  # 获取重定向链接
-                return redirect_url
-            else:
-                return  "无法获取重定向链接，状态码: {}".format(response.status_code)
-        except Exception as e:
-            return "请求失败: {}".format(str(e))
+    def get_redirect_url_with_retry(self, short_url: str, max_retries: int = 3) :
+        """
+        带重试机制的重定向URL获取
+        """
+        session = requests.Session()
+        
+        # 配置重试策略
+        retry_strategy = Retry(
+            total=max_retries,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"]
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        # 用户代理池
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ]
+        
+        for attempt in range(max_retries):
+            try:
+                headers = {
+                    "User-Agent": random.choice(user_agents),
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                    "Connection": "keep-alive"
+                }
+                
+                response = session.get(
+                    short_url,
+                    headers=headers,
+                    allow_redirects=False,
+                    timeout=(10, 30),
+                    verify=False
+                )
+                
+                if response.status_code in [301, 302, 303, 307, 308]:
+                    redirect_url = response.headers.get('Location')
+                    if redirect_url:
+                        return redirect_url
+                
+                # 如果不是重定向，等待后重试
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    time.sleep(wait_time)
+                    
+            except Exception as e:
+                print(f"第 {attempt + 1} 次尝试失败: {str(e)}")
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    time.sleep(wait_time)
+        
+        return  f"经过 {max_retries} 次重试后仍然失败"
 
     def collect_comments_by_url(self, note_url: str, max_comments: int = 10, max_attempts: int = 10, origin_author: str = None) -> list:
         """
