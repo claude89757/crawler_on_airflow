@@ -224,7 +224,7 @@ def collect_xhs_comments(device_index: int = 0, **context):
     keyword = context['dag_run'].conf.get('keyword')
     note_urls = context['dag_run'].conf.get('note_urls')
     max_comments = context['dag_run'].conf.get('max_comments', 10)  # 默认收集10条评论
-
+    
     if not keyword and not note_urls:
         raise ValueError("keyword和note_urls参数不能同时为空")
     

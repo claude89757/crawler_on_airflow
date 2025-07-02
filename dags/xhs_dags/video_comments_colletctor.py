@@ -84,7 +84,8 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
                 keyword,
                 comment.get('comment_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
                 comment.get('collect_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                comment.get('location', '')
+                comment.get('location', ''),
+                '视频'
             ))
 
         cursor.executemany(insert_sql, insert_data)
@@ -108,7 +109,7 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
         cursor.close()
         db_conn.close()
 
-def get_notes_by_url_list(note_urls: list, keyword: str = None, device_index: int = 0, email: str = None, max_comments: int = 10):
+def get_video_comments_by_url_list(note_urls: list, keyword: str = None, device_index: int = 0, email: str = None, max_comments: int = 10):
     """根据传入的笔记URL列表收集评论
     Args:
         note_urls: 笔记URL列表
@@ -155,11 +156,11 @@ def get_notes_by_url_list(note_urls: list, keyword: str = None, device_index: in
         for note_url in note_urls:
             try:
                 # 收集评论
-                # if len(note_url) == 34:  # 链接长度34则为短链接
-                #     full_url = xhs.get_redirect_url(note_url)
-                #     print(f"处理笔记URL: {full_url}")
-                # else:
-                #     full_url = note_url  # 长链不需要处理直接使用
+                if len(note_url) == 34:  # 链接长度34则为短链接
+                    full_url = xhs.get_redirect_url(note_url)
+                    print(f"处理笔记URL: {full_url}")
+                else:
+                    full_url = note_url  # 长链不需要处理直接使用
 
                 # 收集评论，传递原作者信息
                 comments = xhs.collect_video_comments(note_url, max_comments=max_comments)
@@ -220,7 +221,7 @@ def collect_video_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到笔记URL")
         
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个笔记URL进行收集")
-        return get_notes_by_url_list(device_urls, keyword, device_index, email,max_comments)
+        return get_video_comments_by_url_list(device_urls, keyword, device_index, email,max_comments)
     else:
         # 从数据库获取视频URL和关键词
         notes_data = get_video_url(keyword)
@@ -233,7 +234,7 @@ def collect_video_comments(device_index: int = 0, **context):
             raise AirflowSkipException(f"设备索引 {device_index} 没有分配到笔记URL")
         
         print(f"设备索引 {device_index}: 分配到 {len(device_urls)} 个笔记URL进行收集")
-        return get_notes_by_url_list(device_urls, keyword, device_index, email,max_comments)
+        return get_video_comments_by_url_list(device_urls, keyword, device_index, email,max_comments)
 
 def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
     """将URL列表分配给特定设备
