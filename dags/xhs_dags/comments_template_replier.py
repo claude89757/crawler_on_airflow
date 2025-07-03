@@ -388,7 +388,7 @@ def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
 
 # DAG 定义
 with DAG(
-    dag_id='xhs_comments_template_replier',
+    dag_id='comments_template_replier',
     default_args={
         'owner': 'yuchangongzhu',
         'depends_on_past': False,
