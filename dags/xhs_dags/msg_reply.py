@@ -64,7 +64,7 @@ def update_reply_status(replyed_msg_list):
         db_conn.close()
 
 
-def xhs_msg_reply(device_index,**context):
+def msg_reply(device_index,**context):
     email = context['dag_run'].conf.get('email')
     msg= context['dag_run'].conf.get('msg')
     # 获取设备列表
@@ -116,19 +116,19 @@ def xhs_msg_reply(device_index,**context):
             xhs.close()
 
 with DAG(
-    dag_id='xhs_msg_reply',
+    dag_id='msg_reply',
     default_args={'owner': 'yuchangongzhu', 'depends_on_past': False, 'start_date': datetime(2024, 1, 1)},
     description='小红书私信回复任务',
     schedule_interval=None,
-    tags=['小红书'],
+    tags=['小红书','私信回复'],
     catchup=False,
     max_active_runs=5,
 ) as dag:
 
     for index in range(10):
         PythonOperator(
-            task_id=f'xhs_msg_reply{index}',
-            python_callable=xhs_msg_reply,
+            task_id=f'msg_reply{index}',
+            python_callable=msg_reply,
             op_kwargs={
                 'device_index': index,
             },

@@ -84,7 +84,7 @@ def save_msg_to_db(msg_list:list):
         cursor.close()
         db_conn.close()
 
-def xhs_msg_check(device_index,**context):
+def msg_check(device_index,**context):
     email = context['dag_run'].conf.get('email')
     
     # 获取设备列表
@@ -115,19 +115,19 @@ def xhs_msg_check(device_index,**context):
     else:
         print("没有未回复的私信")
 with DAG(
-    dag_id='xhs_msg_check',
+    dag_id='msg_check',
     default_args={'owner': 'yuchangongzhu', 'depends_on_past': False, 'start_date': datetime(2024, 1, 1)},
     description='小红书私信检查任务',
     schedule_interval=None,
-    tags=['小红书'],
+    tags=['小红书','私信检查'],
     catchup=False,
     max_active_runs=5,
 ) as dag:
 
     for index in range(10):
         PythonOperator(
-            task_id=f'xhs_msg_check{index}',
-            python_callable=xhs_msg_check,
+            task_id=f'msg_check{index}',
+            python_callable=msg_check,
             op_kwargs={
                 'device_index': index,
             },
