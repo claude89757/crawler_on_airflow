@@ -389,14 +389,10 @@ def distribute_urls(urls: list, device_index: int, total_devices: int) -> list:
 # DAG 定义
 with DAG(
     dag_id='comments_template_replier',
-    default_args={
-        'owner': 'yuchangongzhu',
-        'depends_on_past': False,
-        'start_date': datetime(2024, 1, 1)
-    },
+    default_args={'owner': 'yuchangongzhu', 'depends_on_past': False, 'start_date': datetime(2024, 1, 1)},
     description='使用模板自动回复评论',
     schedule_interval=None,
-    tags=['小红书'],
+    tags=['小红书','评论回复'],
     catchup=False,
     max_active_runs=5,
 ) as dag:
