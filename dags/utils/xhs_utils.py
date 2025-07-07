@@ -332,12 +332,12 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
     # 示例参数
-    cos_url = "https://xhs-template-1347723456.cos.ap-guangzhou.myqcloud.com/yuchangongzhu%40gmail.com/72/cat.jpg"
+    cos_url = "https://wx-records-1347723456.cos.ap-guangzhou.myqcloud.com/wx%E5%9B%9E%E5%A4%8D%E5%9B%BE%E7%89%87%E6%A8%A1%E6%9D%BF/986468573387963.mp4"
     host_address = "42.193.193.179"
-    host_username = "lucy"
+    host_username = "lucy002"
     host_password = "lucyai"
-    device_id = "ZY22GS335P"
-    host_port=8667
+    device_id = "ZD222H3QDX"
+    host_port=10003
     
     # 测试完整流程
     result = cos_to_device_via_host(

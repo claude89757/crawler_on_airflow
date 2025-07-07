@@ -151,9 +151,6 @@ def collect_xhs_notes(device_index=0, **context) -> None:
     try:
         # 初始化小红书操作器（带重试机制）
         xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
-        
-    
-        
         # 用于每收集三条笔记保存一次的工具函数
         batch_size = 3  # 每批次保存的笔记数量
         collected_notes = []  # 所有收集到的笔记
@@ -230,7 +227,12 @@ def collect_xhs_notes(device_index=0, **context) -> None:
                 "search_scope":search_scope,
                 "sort_by":sort_by
             })
-            
+            initial_scroll_count = device_index * 3
+            print(f"设备索引 {device_index}，执行初始滑动 {initial_scroll_count} 次")
+            for i in range(initial_scroll_count):
+                xhs.scroll_down()
+                time.sleep(0.5)  # 短暂等待
+            print(f"初始滑动完成，共滑动 {initial_scroll_count} 次")
             print(f"开始收集图文笔记,计划收集{max_notes}条...")
             print("---------------card----------------")
             xhs.print_all_elements()
