@@ -1048,7 +1048,7 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
 
 # DAG 定义
 with DAG(
-    dag_id='new_auto_notes_and_comments_collector',
+    dag_id='xhs_auto_progress',
     default_args={
         'owner': 'yuchangongzhu', 
         'depends_on_past': False, 
@@ -1064,7 +1064,7 @@ with DAG(
     # 创建多个任务，每个任务使用不同的设备索引
     for index in range(10):
         PythonOperator(
-            task_id=f'new_auto_collect_notes_and_comments_{index}',
+            task_id=f'xhs_auto_progress_{index}',
             python_callable=collect_notes_and_comments_immediately,
             provide_context=True,
             op_kwargs={
