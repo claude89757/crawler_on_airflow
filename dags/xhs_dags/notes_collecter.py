@@ -173,19 +173,30 @@ def collect_xhs_notes(device_index=0, **context) -> None:
                 note['note_url'] = note['video_url']
             
             if note_url:
-                # 直接查询数据库
-                db_conn = db_hook.get_conn()
-                cursor = db_conn.cursor()
-                try:
-                    cursor.execute("SELECT 1 FROM xhs_notes WHERE note_url = %s AND keyword = %s LIMIT 1", (note_url, keyword))
-                    if cursor.fetchone():
-                        print(f"笔记已存在，跳过: {note.get('title', '')}")
-                        return
-                    else:
-                        print(f"笔记不存在，添加: {note.get('title', '')},{note.get('keyword', '')},{note_url}, email: {email}")
-                finally:
-                    cursor.close()
-                    db_conn.close()
+                # 从URL中提取笔记ID
+                note_id = None
+                # 匹配URL中的笔记ID部分（24位十六进制字符）
+                match = re.search(r'/item/([a-f0-9]{24})', note_url)
+                if match:
+                    note_id = match.group(1)
+                
+                if note_id:
+                    # 直接查询数据库，使用笔记ID去重
+                    db_conn = db_hook.get_conn()
+                    cursor = db_conn.cursor()
+                    try:
+                        #去重逻辑：根据笔记ID判断是否已存在
+                        cursor.execute("SELECT 1 FROM xhs_notes WHERE note_url LIKE %s LIMIT 1", (f'%{note_id}%',))
+                        if cursor.fetchone():
+                            print(f"笔记ID {note_id} 已存在，跳过: {note.get('title', '')}")
+                            return
+                        else:
+                            print(f"笔记ID {note_id} 不存在，添加: {note.get('title', '')},{note.get('keyword', '')},{note_url}, email: {email}")
+                    finally:
+                        cursor.close()
+                        db_conn.close()
+                else:
+                    print(f"无法从URL中提取笔记ID: {note_url}")
             
             collected_notes.append(note)
             current_batch.append(note)
