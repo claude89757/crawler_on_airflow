@@ -186,7 +186,7 @@ def collect_xhs_notes(device_index=0, **context) -> None:
                     cursor = db_conn.cursor()
                     try:
                         #去重逻辑：根据笔记ID判断是否已存在
-                        cursor.execute("SELECT 1 FROM xhs_notes WHERE note_url LIKE %s LIMIT 1", (f'%{note_id}%',))
+                        cursor.execute("SELECT 1 FROM xhs_notes WHERE note_url LIKE %s  AND keyword = %s LIMIT 1", (f'%{note_id}%',keyword))
                         if cursor.fetchone():
                             print(f"笔记ID {note_id} 已存在，跳过: {note.get('title', '')}")
                             return
