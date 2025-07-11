@@ -68,9 +68,9 @@ def get_task_templates(userInfo=None):
         if userInfo:
             # 如果指定了userInfo，只查询特定用户的模板
             query = """
-                SELECT id, userInfo, keyword, max_notes, max_comments, note_type, 
+                SELECT id, userInfo, keyword, max_notes, max_comments, note_type,
                        time_range, search_scope, sort_by, profile_sentence, 
-                       template_ids, intent_type, created_at, updated_at 
+                       template_ids, intent_type, created_at, updated_at, `desc`
                 FROM task_template 
                 WHERE userInfo = %s 
                 ORDER BY created_at DESC
@@ -81,7 +81,7 @@ def get_task_templates(userInfo=None):
             query = """
                 SELECT id, userInfo, keyword, max_notes, max_comments, note_type, 
                        time_range, search_scope, sort_by, profile_sentence, 
-                       template_ids, intent_type, created_at, updated_at 
+                       template_ids, intent_type, created_at, updated_at, `desc`
                 FROM task_template 
                 ORDER BY created_at DESC
             """
@@ -133,9 +133,9 @@ def get_task_template_by_id(template_id):
         
         # 查询指定ID的任务模板
         query = """
-            SELECT id, userInfo, keyword, max_notes, max_comments, note_type, 
+            SELECT id, userInfo, keyword, max_notes, max_comments, note_type,
                    time_range, search_scope, sort_by, profile_sentence, 
-                   template_ids, intent_type, created_at, updated_at 
+                   template_ids, intent_type, created_at, updated_at, `desc`
             FROM task_template 
             WHERE id = %s
         """
