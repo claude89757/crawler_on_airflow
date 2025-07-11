@@ -99,9 +99,10 @@ def get_remote_devices():
                     devices.append(device_id.strip())
             print(f"devices: {devices}")
             
-            # 检查Appium可用端口(6001-6090)
+            
+            # 检查Appium可用端口(6001-6100)
             available_appium_ports = []
-            for appium_port in range(6001, 6090):
+            for appium_port in range(6001, 6100):
                 if check_port_availability(ssh_client, appium_port):
                     available_appium_ports.append(appium_port)
             print(f"available_appium_ports: {available_appium_ports}")
