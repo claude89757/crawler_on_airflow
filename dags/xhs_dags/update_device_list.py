@@ -55,7 +55,17 @@ def check_port_availability(ssh_client, port):
 def get_remote_devices():
     """通过SSH获取远程主机上的设备列表和可用的Appium端口"""
     # 特殊剔除的设备
-    lucyai_device_id = Variable.get("LUCYAI_DEVICE_ID")
+    lucyai_device_id_raw = Variable.get("LUCYAI_DEVICE_ID")
+    
+    # 解析设备ID列表，支持格式如 [device1,device2,device3]
+    if lucyai_device_id_raw.startswith('[') and lucyai_device_id_raw.endswith(']'):
+        # 移除方括号并按逗号分割
+        lucyai_device_ids = [device_id.strip() for device_id in lucyai_device_id_raw[1:-1].split(',')]
+        print(f"已解析设备ID列表: {lucyai_device_ids}")
+    else:
+        # 单个设备ID的情况
+        lucyai_device_ids = [lucyai_device_id_raw]
+        print(f"使用单个设备ID: {lucyai_device_ids}")
 
     # 获取Airflow变量   
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
@@ -92,11 +102,13 @@ def get_remote_devices():
             devices = []
             for line in output.split('\n'):
                 if line.strip() and 'device' in line and "devices" not in line:
-                    if lucyai_device_id in line:
-                        # LUCYAY的设备，不使用
+                    device_id = line.split()[0].strip()
+                    # 检查设备ID是否在排除列表中
+                    if any(excluded_id in device_id for excluded_id in lucyai_device_ids):
+                        # LUCYAI的设备，不使用
+                        print(f"排除设备: {device_id} (匹配排除列表)")
                         continue
-                    device_id = line.split()[0]
-                    devices.append(device_id.strip())
+                    devices.append(device_id)
             print(f"devices: {devices}")
             
             
