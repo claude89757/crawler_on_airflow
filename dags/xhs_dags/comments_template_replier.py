@@ -250,7 +250,8 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                     comment_content=comment_content,
                     reply_content=reply_content,
                     has_image=has_image,
-                    skip_url_open=skip_url_open
+                    skip_url_open=skip_url_open,
+                    note_type=note_type
                 )
                 
                 # 更新上一个URL
