@@ -84,7 +84,8 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
             keyword VARCHAR(255) NOT NULL,
             comment_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             collect_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            location TEXT
+            location TEXT,
+            note_type TEXT
         )
         """)
         db_conn.commit()
@@ -92,8 +93,8 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
         # 准备插入数据的SQL语句
         insert_sql = """
         INSERT INTO xhs_comments 
-        (note_url, author, userInfo, content, likes, keyword, comment_time, collect_time, location) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (note_url, author, userInfo, content, likes, keyword, comment_time, collect_time, location,note_type) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s)
         """
         
         # 批量插入评论数据
@@ -108,7 +109,8 @@ def save_comments_to_db(comments: list, note_url: str, keyword: str = None, emai
                 keyword,
                 comment.get('comment_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
                 comment.get('collect_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                comment.get('location', '')
+                comment.get('location', ''),
+                '图文'
             ))
 
         cursor.executemany(insert_sql, insert_data)
