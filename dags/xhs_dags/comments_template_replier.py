@@ -222,7 +222,7 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                 author = comment['author']
                 comment_content = comment['content']
                 comment_id = comment['comment_id']
-                note_type=comment['comment_id']
+                note_type=comment['note_type']
                 print(f"设备 {device_id} 正在处理第 {i+1}/{len(comments_to_process)} 条评论 - 作者: {author}")
                 
                 #随机选择一条回复模板
