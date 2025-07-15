@@ -83,16 +83,16 @@ def get_reply_contents_from_db(comment_ids: list, max_comments: int = 10):
     if comment_ids:
         placeholders = ','.join(['%s'] * len(comment_ids))
         cursor.execute(
-            f"SELECT id, note_url, author, userInfo, content FROM xhs_comments WHERE id IN ({placeholders})",
+            f"SELECT id, note_url, author, userInfo, content,note_type FROM xhs_comments WHERE id IN ({placeholders})",
             comment_ids
         )
     else:
         cursor.execute(
-            "SELECT id, note_url, author, userInfo, content FROM xhs_comments LIMIT %s",
+            "SELECT id, note_url, author, userInfo, content,note_type FROM xhs_comments LIMIT %s",
             (max_comments,)
         )
 
-    results = [{'comment_id': row[0], 'note_url': row[1], 'author': row[2], 'userInfo': row[3], 'content': row[4]} for row in cursor.fetchall()]
+    results = [{'comment_id': row[0], 'note_url': row[1], 'author': row[2], 'userInfo': row[3], 'content': row[4], 'note_type': row[5]} for row in cursor.fetchall()]
 
     cursor.close()
     db_conn.close()
@@ -222,7 +222,7 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                 author = comment['author']
                 comment_content = comment['content']
                 comment_id = comment['comment_id']
-                
+                note_type=comment['comment_id']
                 print(f"设备 {device_id} 正在处理第 {i+1}/{len(comments_to_process)} 条评论 - 作者: {author}")
                 
                 #随机选择一条回复模板

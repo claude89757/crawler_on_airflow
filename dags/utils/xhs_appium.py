@@ -2662,7 +2662,7 @@ class XHSOperator:
             #返回评论界面
            
             
-    def comments_reply(self, note_url: str, author: str, comment_content: str, reply_content: str, skip_url_open: bool = False,has_image:bool=False):
+    def comments_reply(self, note_url: str, author: str, comment_content: str, reply_content: str, skip_url_open: bool = False,has_image:bool=False,note_type:str='图文'):
         """
         回复评论
         Args:
@@ -2696,28 +2696,48 @@ class XHSOperator:
                 
                 # 只有在不跳过URL打开时才需要等待评论区加载
                 if not skip_url_open:
-                    print("等待评论区加载...")
-                    for i in range(10):
-                        try:
-                            # 查找评论列表
+                    if note_type=='图文':
+                        print("等待评论区加载...")
+                        for i in range(10):
                             try:
-                                WebDriverWait(self.driver, 0.3).until(
-                                    EC.presence_of_element_located((
-                        AppiumBy.XPATH,
-                        "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']/android.widget.FrameLayout/android.widget.LinearLayout"
-                    ))
-                    
-                    #更换了评论区定位元素
-                                )
-                                print("找到评论区")
-                                break
-                            except:
-                                print("未找到评论区,再次滑动页面...")
-                                self.scroll_down()
-                                time.sleep(2)
-                        except Exception as e:
-                            print(f"等待评论区加载失败: {str(e)}")
+                                # 查找评论列表
+                                try:
+                                    WebDriverWait(self.driver, 0.3).until(
+                                        EC.presence_of_element_located((
+                            AppiumBy.XPATH,
+                            "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']/android.widget.FrameLayout/android.widget.LinearLayout"
+                        ))
+                        
+                        #更换了评论区定位元素
+                                    )
+                                    print("找到评论区")
+                                    break
+                                except:
+                                    print("未找到评论区,再次滑动页面...")
+                                    self.scroll_down()
+                                    time.sleep(2)
+                            except Exception as e:
+                                print(f"等待评论区加载失败: {str(e)}")
+                                return []
+                    elif note_type=='视频':
+                        try:
+                            self.driver.find_element(
+                                            by=AppiumBy.XPATH,
+                                            value="//android.widget.Button[contains(@content-desc, '评论0')]"
+                                        )
+                            print(f"笔记没有评论,跳过收集评论逻辑")
                             return []
+                        except Exception as e:
+                            print(f"笔记有评论,继续收集评论逻辑")
+                        
+                        #有评论执行收集逻辑
+                        #打开评论区
+                        self.driver.find_element(
+                                        by=AppiumBy.XPATH,
+                                        value="//android.widget.Button[contains(@content-desc, '评论')]"
+                                    ).click()
+                        # 等待评论区加载
+                        time.sleep(2)
                 else:
                     print("跳过评论区定位，直接查找目标评论")
                 
