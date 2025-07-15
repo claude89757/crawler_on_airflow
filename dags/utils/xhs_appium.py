@@ -1649,7 +1649,7 @@ class XHSOperator:
                 if url_start != -1:
                     video_url = share_text[url_start:url_end] if url_end != -1 else share_text[url_start:]
                     print(f"提取到视频URL: {video_url}")
-                    video_url = self.get_redirect_url(video_url)
+                    video_url = self.get_redirect_url(video_url.replace('复制本条信息','').strip())
                     print(f"重定向后的视频URL: {video_url}")
                 else:
                     video_url = "未知"
