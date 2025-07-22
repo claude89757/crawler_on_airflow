@@ -2880,13 +2880,15 @@ class XHSOperator:
                             break
                             
                         # 如果没找到，向下滚动
-                        self.driver.swipe(500, 1000, 500, 500, 1000)
+                        self.scroll_down()
+                        time.sleep(1)
                         scroll_attempt += 1
                         
                     except Exception as e:
                         print(f"查找评论时出错: {str(e)}")
                         # 如果没找到，向下滚动
-                        self.driver.swipe(500, 1000, 500, 500, 1000)
+                        self.scroll_down()
+                        time.sleep(1)
                         scroll_attempt += 1
                 
                 if not comment_found:
