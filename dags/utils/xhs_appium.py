@@ -642,31 +642,70 @@ class XHSOperator:
                 # 确保地区为"无地区"
                 location = "无地区"
         
-        # 2. 处理"x小时前"格式
-        elif time_ago_match := re.search(r"(\d+)\s*小时前", text):
+        # 2. 处理"昨天 HH:MM [地区]"格式（地区可选）
+        elif yesterday_match := re.search(r"昨天\s+(\d{1,2}):(\d{2})(?:\s+([^\s]+))?(?=\s+回复|$)", text):
+            hour = yesterday_match.group(1)
+            minute = yesterday_match.group(2)
+            location_part = yesterday_match.group(3) if yesterday_match.group(3) else None
+            
+            if location_part:
+                location = location_part
+                time_str = f"昨天 {hour}:{minute} {location}"
+            else:
+                location = "无地区"
+                time_str = f"昨天 {hour}:{minute}"
+            
+            # 计算昨天的日期和时间
+            yesterday = now - timedelta(days=1)
+            timestamp = yesterday.replace(hour=int(hour), minute=int(minute), second=0).strftime("%Y-%m-%d %H:%M:%S")
+            
+            # 删除时间戳和地区标记的组合
+            pattern = f"\s*{re.escape(time_str)}(?=\s+回复|$)"
+            cleaned_text = re.sub(pattern, "", text)
+            # 删除末尾的回复字样
+            cleaned_text = re.sub(r"\s+回复$", "", cleaned_text).strip()
+        
+        # 3. 处理"x分钟前 [地区]"格式（地区可选）
+        elif minutes_ago_match := re.search(r"(\d+)\s*分钟前(?:\s+([^\s]+))?(?=\s+回复|$)", text):
+            minutes_ago = int(minutes_ago_match.group(1))
+            location_part = minutes_ago_match.group(2) if minutes_ago_match.group(2) else None
+            
+            if location_part:
+                location = location_part
+                time_str = f"{minutes_ago}分钟前 {location}"
+            else:
+                location = "无地区"
+                time_str = f"{minutes_ago}分钟前"
+            
+            timestamp = (now - timedelta(minutes=minutes_ago)).strftime("%Y-%m-%d %H:%M:%S")
+            
+            # 删除时间戳和地区标记的组合
+            pattern = f"\s*{re.escape(time_str)}(?=\s+回复|$)"
+            cleaned_text = re.sub(pattern, "", text)
+            # 删除末尾的回复字样
+            cleaned_text = re.sub(r"\s+回复$", "", cleaned_text).strip()
+        
+        # 4. 处理"x小时前 [地区]"格式（地区可选）
+        elif time_ago_match := re.search(r"(\d+)\s*小时前(?:\s+([^\s]+))?(?=\s+回复|$)", text):
             hours_ago = int(time_ago_match.group(1))
-            time_str = f"{hours_ago}小时前"
+            location_part = time_ago_match.group(2) if time_ago_match.group(2) else None
+            
+            if location_part:
+                location = location_part
+                time_str = f"{hours_ago}小时前 {location}"
+            else:
+                location = "无地区"
+                time_str = f"{hours_ago}小时前"
+            
             timestamp = (now - timedelta(hours=hours_ago)).strftime("%Y-%m-%d %H:%M:%S")
             
-            # 提取地区信息 (通常在时间后面)
-            location_match = re.search(f"{re.escape(time_str)}\s+([^\s]+)(?=\s+回复|$)", text)
-            if location_match:
-                location = location_match.group(1)
-                # 只删除时间戳和地区标记的组合，不影响评论内容中的地区名称
-                pattern = f"\s*{re.escape(time_str)}\s+{re.escape(location)}(?=\s+回复|$)"
-                cleaned_text = re.sub(pattern, "", text)
-                # 删除末尾的回复字样
-                cleaned_text = re.sub(r"\s+回复$", "", cleaned_text).strip()
-            else:
-                # 如果没有找到地区信息，只删除时间和回复字样
-                pattern = f"\s*{re.escape(time_str)}(?=\s+回复|$)"
-                cleaned_text = re.sub(pattern, "", text)
-                # 删除末尾的回复字样
-                cleaned_text = re.sub(r"\s+回复$", "", cleaned_text).strip()
-                # 确保地区为"无地区"
-                location = "无地区"
+            # 删除时间戳和地区标记的组合
+            pattern = f"\s*{re.escape(time_str)}(?=\s+回复|$)"
+            cleaned_text = re.sub(pattern, "", text)
+            # 删除末尾的回复字样
+            cleaned_text = re.sub(r"\s+回复$", "", cleaned_text).strip()
         
-        # 3. 处理MM-DD格式
+        # 5. 处理MM-DD格式
         elif date_match := re.search(r"(\d{2})-(\d{2})", text):
             month = date_match.group(1)
             day = date_match.group(2)
@@ -2126,7 +2165,7 @@ class XHSOperator:
                             try:
                                 # 获取评论内容
                                 comment_text = comment_elem.text.strip()
-                                
+                                content_copy=comment_text
                                 # 移除日期和回复后缀，并提取时间信息
                                 time_pattern = r'(?P<date>\d{4}-\d{2}-\d{2})|(?P<short_date>\d{2}-\d{2})|(?P<yesterday>昨天\s*(?P<yesterday_time>\d{2}:\d{2}))|(?P<relative>(?P<value>\d+)\s*(?P<unit>小时|分钟)前)(?:\s*\n?\s*(?P<location>[^\s]+))?\s*回复'
                                 time_match = re.search(time_pattern, comment_text)
@@ -2156,10 +2195,10 @@ class XHSOperator:
                                             collect_time = (now - timedelta(minutes=value)).strftime('%Y-%m-%d')
                                 
                                 # 移除时间信息和回复后缀
-                                # comment_text = re.sub(time_pattern, '', comment_text)
+                                comment_text = re.sub(time_pattern, '', comment_text)
                                 # 额外清理可能的回复后缀
-                                # comment_text = re.sub(r'\s*回复\s*$', '', comment_text)
-                                # comment_text = comment_text.strip()
+                                comment_text = re.sub(r'\s*回复\s*$', '', comment_text)
+                                comment_text = comment_text.strip()
                                 
                                 # 跳过第一条评论（文章内容）
                                 if is_first_comment:
@@ -2264,13 +2303,15 @@ class XHSOperator:
                                         print(f"获取作者信息时出错: {str(e)}")
                                     
                                     #去除无用信息后的评论文本和时间、地点信息
-                                    info_of_comment=self.extract_time_location_from_text(comment_text)
+                                    info_of_comment=self.extract_time_location_from_text(content_copy)
                                     # 构建评论数据
                                     comment_data = {
                                         "author": author,
-                                        "content": info_of_comment['cleaned_text'].replace('回复',''), #去除无用信息后的评论
+                                        # "content": info_of_comment['cleaned_text'].replace('回复',''), #
+                                        'content':comment_text.split('\n')[0].replace(info_of_comment.get('location', '未知'),''),
                                         "likes": likes,
-                                        "comment_time": info_of_comment.get('timestamp', collect_time), #评论时间
+                                        # "comment_time": info_of_comment.get('timestamp', collect_time), #评论时间
+                                        'comment_time':collect_time,
                                         "collect_time": time.strftime("%Y-%m-%d %H:%M:%S"), #评论收集时间
                                         "location": info_of_comment.get('location', '未知'), #评论地区
                                     }
@@ -3288,8 +3329,8 @@ if __name__ == "__main__":
 
     try:
         # 1 测试收集文章
-        print("\n开始测试收集文章...")
-        notes = xhs.collect_video_comments('http://xhslink.com/a/coeq2hYSGC6fb')
+        # print("\n开始测试收集文章...")
+        # notes = xhs.collect_video_comments('http://xhslink.com/a/coeq2hYSGC6fb')
         
         # print(f"\n共收集到 {len(notes)} 条笔记:")
         # for i, note in enumerate(notes, 1):
@@ -3305,20 +3346,21 @@ if __name__ == "__main__":
         #     print("-" * 50) 
 
         # 2 测试收集评论
-        # print("\n开始测试收集评论...")
-        # note_url = "http://xhslink.com/a/x19KvkQFHVBdb"
+        print("\n开始测试收集评论...")
+        note_url = "https://www.xiaohongshu.com/discovery/item/687e016d000000002201dbbe?app_platform=android&ignoreEngage=true&app_version=8.72.0&share_from_user_hidden=true&xsec_source=app_share&type=normal&xsec_token=CBOO9x2tD5d4Ne8eSR9P2Dc8XJPInR8xznMv95xoBm_hM%3D&author_share=1&xhsshare=CopyLink&shareRedId=OD43Q0dKN0s2NzUyOTgwNjdIOTo9OzlC&apptime=1753159608&share_id=ddd2c38bf52c4994a678ef3af0154cf8&share_channel=copy_link"
         # full_url = xhs.get_redirect_url(note_url)
-        # print(f"帖子 URL: {full_url}")
+        print(f"帖子 URL: {note_url}")
         
-        # comments = xhs.collect_comments_by_url(full_url,max_comments=10)
-        # print(f"\n共收集到 {len(comments)} 条评论:")
-        # for i, comment in enumerate(comments, 1):
-        #     print(f"\n评论 {i}:")
-        #     print(f"作者: {comment['author']}")
-        #     print(f"内容: {comment['content']}")
-        #     print(f"点赞: {comment['likes']}")
-        #     print(f"时间: {comment['collect_time']}")
-        #     print("-" * 50)
+        comments = xhs.collect_comments_by_url(note_url,max_comments=10)
+        print(f"\n共收集到 {len(comments)} 条评论:")
+        for i, comment in enumerate(comments, 1):
+            print(f"\n评论 {i}:")
+            print(f"作者: {comment['author']}")
+            print(f"内容: {comment['content']}")
+            print(f"点赞: {comment['likes']}")
+            print(f"地区: {comment['location']}")
+            print(f"时间: {comment['collect_time']}")
+            print("-" * 50)
 
         # 3 测试检查未回复私信功能
         # print("\n开始测试检查未回复私信功能...")
