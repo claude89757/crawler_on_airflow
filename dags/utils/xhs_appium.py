@@ -3325,11 +3325,26 @@ if __name__ == "__main__":
     xhs = XHSOperator(
         appium_server_url=appium_server_url,
         force_app_launch=False,
-        device_id="ZY22FX4H65",
+        device_id="ZY22FX5QQR",
         # system_port=8200
     )
 
     try:
+        try:
+            upgrade_prompt = xhs.driver.find_elements(
+                by=AppiumBy.XPATH,
+                value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='需要升级应用才能查看此内容，请更新到最新版本']"
+            )
+            if upgrade_prompt:
+                print("检测到升级提示，点击知道了按钮")
+                know_button = xhs.driver.find_element(
+                    by=AppiumBy.XPATH,
+                    value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='知道了']"
+                )
+                know_button.click()
+                time.sleep(0.5)
+        except Exception as e:
+            print(f"未检测到版本升级提示: {e}")
         # 1 测试收集文章
         # print("\n开始测试收集文章...")
         # notes = xhs.collect_video_comments('http://xhslink.com/a/coeq2hYSGC6fb')
@@ -3348,21 +3363,21 @@ if __name__ == "__main__":
         #     print("-" * 50) 
 
         # 2 测试收集评论
-        print("\n开始测试收集评论...")
-        note_url = "https://www.xiaohongshu.com/discovery/item/687e016d000000002201dbbe?app_platform=android&ignoreEngage=true&app_version=8.72.0&share_from_user_hidden=true&xsec_source=app_share&type=normal&xsec_token=CBOO9x2tD5d4Ne8eSR9P2Dc8XJPInR8xznMv95xoBm_hM%3D&author_share=1&xhsshare=CopyLink&shareRedId=OD43Q0dKN0s2NzUyOTgwNjdIOTo9OzlC&apptime=1753159608&share_id=ddd2c38bf52c4994a678ef3af0154cf8&share_channel=copy_link"
-        # full_url = xhs.get_redirect_url(note_url)
-        print(f"帖子 URL: {note_url}")
+        # print("\n开始测试收集评论...")
+        # note_url = "https://www.xiaohongshu.com/discovery/item/687e016d000000002201dbbe?app_platform=android&ignoreEngage=true&app_version=8.72.0&share_from_user_hidden=true&xsec_source=app_share&type=normal&xsec_token=CBOO9x2tD5d4Ne8eSR9P2Dc8XJPInR8xznMv95xoBm_hM%3D&author_share=1&xhsshare=CopyLink&shareRedId=OD43Q0dKN0s2NzUyOTgwNjdIOTo9OzlC&apptime=1753159608&share_id=ddd2c38bf52c4994a678ef3af0154cf8&share_channel=copy_link"
+        # # full_url = xhs.get_redirect_url(note_url)
+        # print(f"帖子 URL: {note_url}")
         
-        comments = xhs.collect_comments_by_url(note_url,max_comments=10)
-        print(f"\n共收集到 {len(comments)} 条评论:")
-        for i, comment in enumerate(comments, 1):
-            print(f"\n评论 {i}:")
-            print(f"作者: {comment['author']}")
-            print(f"内容: {comment['content']}")
-            print(f"点赞: {comment['likes']}")
-            print(f"地区: {comment['location']}")
-            print(f"时间: {comment['collect_time']}")
-            print("-" * 50)
+        # comments = xhs.collect_comments_by_url(note_url,max_comments=10)
+        # print(f"\n共收集到 {len(comments)} 条评论:")
+        # for i, comment in enumerate(comments, 1):
+        #     print(f"\n评论 {i}:")
+        #     print(f"作者: {comment['author']}")
+        #     print(f"内容: {comment['content']}")
+        #     print(f"点赞: {comment['likes']}")
+        #     print(f"地区: {comment['location']}")
+        #     print(f"时间: {comment['collect_time']}")
+        #     print("-" * 50)
 
         # 3 测试检查未回复私信功能
         # print("\n开始测试检查未回复私信功能...")
