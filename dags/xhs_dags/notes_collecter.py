@@ -392,7 +392,7 @@ with DAG(
     max_active_tasks=15,
 ) as dag:
 
-    for index in range(10):
+    for index in range(15):
         PythonOperator(
             task_id=f'collect_xhs_notes_{index}',
             python_callable=collect_xhs_notes,

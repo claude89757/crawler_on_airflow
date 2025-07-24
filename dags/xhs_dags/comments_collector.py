@@ -308,7 +308,7 @@ with DAG(
 ) as dag:
 
     # 创建多个任务，每个任务使用不同的设备索引
-    for index in range(10):
+    for index in range(15):
         PythonOperator(
             task_id=f'collect_xhs_comments_{index}',
             python_callable=collect_xhs_comments,

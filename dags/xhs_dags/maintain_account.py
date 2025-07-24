@@ -430,7 +430,7 @@ with DAG(
     max_active_tasks=15,
 ) as dag:
 
-    for index in range(10):
+    for index in range(15):
         PythonOperator(
             task_id=f'browse_xhs_notes_{index}',
             python_callable=browse_xhs_notes,
@@ -439,6 +439,6 @@ with DAG(
             },
             provide_context=True,
             retries=2,
-            retry_delay=timedelta(seconds=10)
+            retry_delay=timedelta(seconds=15)
         
         )
