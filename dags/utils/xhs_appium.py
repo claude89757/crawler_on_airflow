@@ -3264,7 +3264,7 @@ class XHSOperator:
                                 back_btn.click()
                         except Exception as e:
                                 print(f"回复私信失败: {str(e)}")
-        except Exception as e
+        except Exception as e:
                 print(f"没有陌生人私信，执行回复正常私信逻辑")
         #第二套逻辑----正常私信
         try:    
