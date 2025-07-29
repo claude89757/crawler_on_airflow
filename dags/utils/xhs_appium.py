@@ -3270,12 +3270,7 @@ class XHSOperator:
         try:    
             for index,i in enumerate(range(5)):
                 try:    #定位未回复私信
-                    # 获取屏幕尺寸
-                    screen_size = self.driver.get_window_size()
-                    screen_height = screen_size['height']
-                    upper_limit = screen_height // 6  # 屏幕上方1/6位置
-
-                    normal_msg_frames = self.driver.find_elements(by=AppiumBy.XPATH,value=f"//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-' and contains(@content-desc,'条未读') and not(contains(@content-desc,'评论和@')) and substring-before(substring-after(@bounds,'['),',') > '{upper_limit}']")
+                    normal_msg_frames = self.driver.find_elements(by=AppiumBy.XPATH,value="//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-' and contains(@content-desc,'条未读')and not(contains(@content-desc,'赞和收藏'))and not(contains(@content-desc,'评论和@'))]")
                     if normal_msg_frames:
                         for msg_frame in normal_msg_frames:
                             msg_author=msg_frame.find_element(by=AppiumBy.XPATH,value=".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-']").text
