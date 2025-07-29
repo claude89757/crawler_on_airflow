@@ -3264,7 +3264,7 @@ class XHSOperator:
                                 back_btn.click()
                         except Exception as e:
                                 print(f"回复私信失败: {str(e)}")
-        except Exception as e:
+        except Exception as e
                 print(f"没有陌生人私信，执行回复正常私信逻辑")
         #第二套逻辑----正常私信
         try:    
@@ -3273,8 +3273,8 @@ class XHSOperator:
                     # 获取屏幕尺寸
                     screen_size = self.driver.get_window_size()
                     screen_height = screen_size['height']
-                    upper_limit = screen_height // 5  # 屏幕上方1/5位置
-                    
+                    upper_limit = screen_height // 6  # 屏幕上方1/6位置
+
                     normal_msg_frames = self.driver.find_elements(by=AppiumBy.XPATH,value=f"//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-' and contains(@content-desc,'条未读') and not(contains(@content-desc,'评论和@')) and substring-before(substring-after(@bounds,'['),',') > '{upper_limit}']")
                     if normal_msg_frames:
                         for msg_frame in normal_msg_frames:
