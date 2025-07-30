@@ -123,9 +123,10 @@ def get_auto_result(event, context):
                 # 普通用户查询
                 query = f"""
                     SELECT 
-                        n.author as author,
+                        c.author as author,
                         c.content as comment_content,
                         c.likes as comment_likes,
+                        c.comment_time as comment_time,
                         ci.intent as intent,
                         IFNULL(cmr.reply, '未回复') as reply_content
                     FROM xhs_notes n
@@ -139,10 +140,11 @@ def get_auto_result(event, context):
                 # 管理员查询
                 query = f"""
                     SELECT 
-                        n.userInfo as email,
-                        n.author as author,
+                        c.userInfo as email,
+                        c.author as author,
                         c.content as comment_content,
                         c.likes as comment_likes,
+                        c.comment_time as comment_time,
                         ci.intent as intent,
                         IFNULL(cmr.reply, '未回复') as reply_content
                     FROM xhs_notes n
