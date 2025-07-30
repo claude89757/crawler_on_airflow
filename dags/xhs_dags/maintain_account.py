@@ -426,8 +426,8 @@ with DAG(
     schedule_interval=None,
     tags=['小红书'],
     catchup=False,
-    max_active_runs=15,
-    max_active_tasks=15,
+    max_active_runs=30,
+    max_active_tasks=30,
 ) as dag:
 
     for index in range(15):
