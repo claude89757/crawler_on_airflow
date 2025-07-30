@@ -126,6 +126,7 @@ def get_auto_result(event, context):
                         c.author as author,
                         c.content as comment_content,
                         c.likes as comment_likes,
+                        c.comment_time as comment_time,
                         ci.intent as intent,
                         IFNULL(cmr.reply, '未回复') as reply_content
                     FROM xhs_notes n
@@ -143,6 +144,7 @@ def get_auto_result(event, context):
                         c.author as author,
                         c.content as comment_content,
                         c.likes as comment_likes,
+                        c.comment_time as comment_time,
                         ci.intent as intent,
                         IFNULL(cmr.reply, '未回复') as reply_content
                     FROM xhs_notes n
