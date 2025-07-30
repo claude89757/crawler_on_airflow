@@ -2994,7 +2994,7 @@ class XHSOperator:
                             print(f"第{i+1}次检查：当前页面没有陌生人私信")
                             break
                         
-                        current_page_found = False
+                        
                         
                         for msg_frame in msg_frames:
                             try:
@@ -3015,7 +3015,7 @@ class XHSOperator:
                                     })
                                     total_unreplied += 1
                                     print(f"发现未回复陌生人私信: {msg_author}")
-                                    current_page_found = True
+                                    
                                     
                             except Exception as e:
                                 print(f"解析陌生人私信失败: {str(e)}")
@@ -3063,13 +3063,14 @@ class XHSOperator:
                             value="//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-' and contains(@content-desc,'条未读')and not(contains(@content-desc,'赞和收藏'))and not(contains(@content-desc,'评论和'))]"
                         )
                         
-                        current_page_found = False
+                        
                         
                         # 处理未读私信
                         if normal_msg_frames:
                             for msg_frame in normal_msg_frames:
                                 try:
                                     # 获取用户名
+                                    msg_content=msg_frame.get_attribute("content-desc").split("，")[3]
                                     msg_author = msg_frame.find_element(
                                         by=AppiumBy.XPATH,
                                         value=".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-']"
@@ -3082,12 +3083,13 @@ class XHSOperator:
                                         # 添加到未回复列表
                                         unreplied_msg_list.append({
                                             'username': msg_author,
+                                            'content': msg_content,
                                             'message_type': '正常私信',
                                             'reply_status': 0  # 0表示未回复
                                         })
                                         total_unreplied += 1
                                         print(f"发现未回复私信: {msg_author}")
-                                        current_page_found = True
+                                        
                                     
                                 except Exception as e:
                                     print(f"解析私信信息失败: {str(e)}")
@@ -3330,21 +3332,21 @@ if __name__ == "__main__":
     )
 
     try:
-        try:
-            upgrade_prompt = xhs.driver.find_elements(
-                by=AppiumBy.XPATH,
-                value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='需要升级应用才能查看此内容，请更新到最新版本']"
-            )
-            if upgrade_prompt:
-                print("检测到升级提示，点击知道了按钮")
-                know_button = xhs.driver.find_element(
-                    by=AppiumBy.XPATH,
-                    value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='知道了']"
-                )
-                know_button.click()
-                time.sleep(0.5)
-        except Exception as e:
-            print(f"未检测到版本升级提示: {e}")
+        # try:
+        #     upgrade_prompt = xhs.driver.find_elements(
+        #         by=AppiumBy.XPATH,
+        #         value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='需要升级应用才能查看此内容，请更新到最新版本']"
+        #     )
+        #     if upgrade_prompt:
+        #         print("检测到升级提示，点击知道了按钮")
+        #         know_button = xhs.driver.find_element(
+        #             by=AppiumBy.XPATH,
+        #             value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='知道了']"
+        #         )
+        #         know_button.click()
+        #         time.sleep(0.5)
+        # except Exception as e:
+        #     print(f"未检测到版本升级提示: {e}")
         # 1 测试收集文章
         # print("\n开始测试收集文章...")
         # notes = xhs.collect_video_comments('http://xhslink.com/a/coeq2hYSGC6fb')
@@ -3380,13 +3382,13 @@ if __name__ == "__main__":
         #     print("-" * 50)
 
         # 3 测试检查未回复私信功能
-        # print("\n开始测试检查未回复私信功能...")
-        # unreplied_result = xhs.check_unreplied_messages()
+        print("\n开始测试检查未回复私信功能...")
+        unreplied_result = xhs.check_unreplied_messages(1,'qq.com')
         
-        # print(f"\n未回复私信检查结果:")
-        # print(f"检查时间: {unreplied_result.get('check_time', 'N/A')}")
-        # print(f"未回复总数: {unreplied_result.get('total_unreplied', 0)}")
-        # print(f"涉及用户数: {len(unreplied_result.get('unreplied_users', []))}")
+        print(f"\n未回复私信检查结果:")
+        print(f"检查时间: {unreplied_result.get('check_time', 'N/A')}")
+        print(f"未回复总数: {unreplied_result.get('total_unreplied', 0)}")
+        print(f"涉及用户数: {len(unreplied_result.get('unreplied_users', []))}")
         
         # if unreplied_result.get('error'):
         #     print(f"检查过程中出现错误: {unreplied_result['error']}")
