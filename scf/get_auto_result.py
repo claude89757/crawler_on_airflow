@@ -123,7 +123,7 @@ def get_auto_result(event, context):
                 # 普通用户查询
                 query = f"""
                     SELECT 
-                        n.author as author,
+                        c.author as author,
                         c.content as comment_content,
                         c.likes as comment_likes,
                         ci.intent as intent,
@@ -139,8 +139,8 @@ def get_auto_result(event, context):
                 # 管理员查询
                 query = f"""
                     SELECT 
-                        n.userInfo as email,
-                        n.author as author,
+                        c.userInfo as email,
+                        c.author as author,
                         c.content as comment_content,
                         c.likes as comment_likes,
                         ci.intent as intent,
