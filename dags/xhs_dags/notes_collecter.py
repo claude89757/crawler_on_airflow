@@ -329,6 +329,24 @@ def get_note_card(xhs, collected_notes, collected_titles, max_notes, process_not
                                 # 点击标题元素而不是整个卡片
                                 print(f"元素位置正常，位于屏幕{element_y/screen_height:.2%}处，执行点击")
                                 title_element.click()
+                                
+                                # 检测是否出现升级提示，如果有则点击"知道了"
+                                try:
+                                    upgrade_prompt = xhs.driver.find_elements(
+                                        by=AppiumBy.XPATH,
+                                        value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='需要升级应用才能查看此内容，请更新到最新版本']"
+                                    )
+                                    if upgrade_prompt:
+                                        print("检测到升级提示，点击知道了按钮")
+                                        know_button = xhs.driver.find_element(
+                                            by=AppiumBy.XPATH,
+                                            value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='知道了']"
+                                        )
+                                        know_button.click()
+                                        time.sleep(0.5)
+                                except Exception as e:
+                                    print(f"未检测到版本升级提示: {e}")
+                                
                                 time.sleep(0.5)
                             else:
                                 print(f"元素位置过高，位于屏幕{element_y/screen_height:.2%}处，跳过点击")
@@ -370,10 +388,11 @@ with DAG(
     schedule_interval=None,
     tags=['小红书'],
     catchup=False,
-    max_active_runs=5,
+    max_active_runs=15,
+    max_active_tasks=15,
 ) as dag:
 
-    for index in range(10):
+    for index in range(15):
         PythonOperator(
             task_id=f'collect_xhs_notes_{index}',
             python_callable=collect_xhs_notes,

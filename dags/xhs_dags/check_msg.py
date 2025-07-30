@@ -124,7 +124,7 @@ with DAG(
     max_active_runs=5,
 ) as dag:
 
-    for index in range(10):
+    for index in range(15):
         PythonOperator(
             task_id=f'msg_check{index}',
             python_callable=msg_check,

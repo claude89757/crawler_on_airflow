@@ -1058,11 +1058,12 @@ with DAG(
     schedule_interval=None,
     tags=['小红书', '自动化', '即时评论'],
     catchup=False,
-    max_active_runs=5,
+    max_active_runs=15,
+    max_active_tasks=15,
 ) as dag:
 
     # 创建多个任务，每个任务使用不同的设备索引
-    for index in range(10):
+    for index in range(15):
         PythonOperator(
             task_id=f'xhs_auto_progress_{index}',
             python_callable=collect_notes_and_comments_immediately,
