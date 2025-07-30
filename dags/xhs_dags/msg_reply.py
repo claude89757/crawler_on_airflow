@@ -30,19 +30,20 @@ def update_reply_status(replyed_msg_list):
     
     try:
         # 准备更新SQL语句，同时更新reply_status和msg_content
-        update_sql = "UPDATE xhs_msg_list SET reply_status = 1, msg_content = %s WHERE user_name = %s"
-        
+        update_sql = "UPDATE xhs_msg_list SET reply_status = 1, msg_content = %s, reply_time = %s WHERE user_name = %s"
+
         updated_count = 0
         for reply_msg in replyed_msg_list:
             msg_author = reply_msg.get('msg_author')
             msg_content = reply_msg.get('msg_content')
-            
+            reply_time = reply_msg.get('reply_time')
+
             if not msg_author:
                 print("跳过无效的消息记录（缺少msg_author）")
                 continue
                 
             try:
-                cursor.execute(update_sql, (msg_content, msg_author))
+                cursor.execute(update_sql, (msg_content, reply_time, msg_author))
                 if cursor.rowcount > 0:
                     updated_count += 1
                     print(f"成功更新用户 {msg_author} 的回复状态和消息内容: {msg_content}")

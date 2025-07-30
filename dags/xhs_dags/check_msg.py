@@ -32,7 +32,9 @@ def save_msg_to_db(msg_list:list):
             user_name TEXT,
             message_type TEXT,    
             device_id TEXT,
+            reply_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             check_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            ask_content text COMMENT '用户发的私信内容',
             reply_status int DEFAULT NULL   
         )
         """)
@@ -66,7 +68,8 @@ def save_msg_to_db(msg_list:list):
                 msg.get('message_type', ''),
                 msg_list.get('device_id',''),
                 msg_list.get('check_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                msg.get('reply_status', 0)
+                msg.get('reply_status', 0),
+                msg.get('ask_content', '')
             ))
 
         # 只有当有新数据时才执行插入

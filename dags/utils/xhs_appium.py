@@ -3011,7 +3011,8 @@ class XHSOperator:
                                     unreplied_msg_list.append({
                                         'username': msg_author,
                                         'message_type': '陌生人私信',
-                                        'reply_status': 0  # 0表示未回复
+                                        'reply_status': 0,  # 0表示未回复
+                                        'ask_content': '陌生人消息',
                                     })
                                     total_unreplied += 1
                                     print(f"发现未回复陌生人私信: {msg_author}")
@@ -3083,7 +3084,7 @@ class XHSOperator:
                                         # 添加到未回复列表
                                         unreplied_msg_list.append({
                                             'username': msg_author,
-                                            'content': msg_content,
+                                            'ask_content': msg_content,
                                             'message_type': '正常私信',
                                             'reply_status': 0  # 0表示未回复
                                         })
@@ -3258,7 +3259,7 @@ class XHSOperator:
                                 send_frame.click()
                                 print(f'{msg_author}的私信回复成功')
                                 #将回复的私信信息添加到返回列表
-                                replyed_msg_list.append({'msg_author':msg_author, 'msg_content':msg})
+                                replyed_msg_list.append({'msg_author':msg_author, 'msg_content':msg,'reply_time':time.strftime("%Y-%m-%d %H:%M:%S")})
                                 #返回到陌生人私信列表
                                 back_btn = WebDriverWait(self.driver, 10).until(
                                         EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-']"))
@@ -3293,7 +3294,7 @@ class XHSOperator:
                                 )
                                 send_frame.click()
                                 print(f'{msg_author}的私信回复成功')
-                                replyed_msg_list.append({'msg_author':msg_author, 'msg_content':msg})
+                                replyed_msg_list.append({'msg_author':msg_author, 'msg_content':msg,'reply_time':time.strftime("%Y-%m-%d %H:%M:%S")})
                                 #返回到正常私信列表
                                 msg_frame = WebDriverWait(self.driver, 10).until(
                                         EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-']"))
