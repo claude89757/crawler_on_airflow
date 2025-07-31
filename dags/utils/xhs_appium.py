@@ -2702,7 +2702,49 @@ class XHSOperator:
             print('选择成功，返回评论界面')
             #返回评论界面
            
-            
+    def reply_with_image(self):
+        #定位到选择回复图片的元素
+        WebDriverWait(self.driver, 2).until(
+                    EC.presence_of_element_located((
+                        AppiumBy.XPATH,
+                        "(//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-'])[10]"
+                    ))
+                ).click()
+        time.sleep(1)  # 等待选择图片界面加载
+        WebDriverWait(self.driver, 2).until(
+                    EC.presence_of_element_located((
+                        AppiumBy.XPATH,
+                        "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='相册']"
+                    ))
+                ).click()
+        time.sleep(1)
+        WebDriverWait(self.driver, 2).until(
+                    EC.presence_of_element_located((
+                        AppiumBy.XPATH,
+                        "(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[5]"
+                    ))
+                ).click()
+        try:
+            # 执行点击操作
+            # self.driver.tap([(674, 258)])
+            print('选择第一张照片成功')
+        except Exception as e:
+            print(f"点击屏幕失败: {str(e)}")
+        #单选版本的点击图片后会自动返回评论界面
+        try:
+            choice_btn=WebDriverWait(self.driver, 2).until(
+                    EC.presence_of_element_located((
+                        AppiumBy.XPATH,
+                        "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and  contains(@text,'完成')]"
+                    ))
+                )
+            if choice_btn:
+                choice_btn.click()
+            print('图片选择完成')
+        except Exception as e:
+            print('选择成功，返回评论界面')
+            #返回评论界面
+        
     def comments_reply(self, note_url: str, author: str, comment_content: str, reply_content: str, skip_url_open: bool = False,has_image:bool=False,note_type:str='图文'):
         """
         回复评论
@@ -3199,7 +3241,7 @@ class XHSOperator:
             return "请求失败: {}".format(str(e))
 
     #私信回复
-    def reply_to_msg(self,msg):
+    def reply_to_msg(self,msg,has_image=False):
         """
         回复消息
         Args:
