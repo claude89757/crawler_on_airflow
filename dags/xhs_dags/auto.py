@@ -1057,6 +1057,17 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                                 
                                 if not success:
                                     print(f"评论ID {comment_result.get('id')} 重试 {max_retries} 次后仍然失败，跳过")
+                                    # 回复失败后重新初始化XHS操作器
+                                    try:
+                                        print("回复失败，重新初始化XHS操作器...")
+                                        xhs.close()
+                                        time.sleep(2)
+                                        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=False, device_id=device_id)
+                                        previous_url = None  # 重置URL跟踪
+                                        print("XHS操作器重新初始化完成")
+                                    except Exception as e:
+                                        print(f"重新初始化XHS操作器失败: {str(e)}")
+                                        # 如果重新初始化失败，继续使用原有的操作器
                                     
                                 # 添加延迟避免操作过快
                                 time.sleep(random.uniform(2, 5))
