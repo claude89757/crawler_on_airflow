@@ -940,83 +940,128 @@ def collect_notes_and_comments_immediately(device_index: int = 0,**context):
                         
                         # 执行回复逻辑
                         previous_url = None  # 跟踪上一个处理的URL
-                        for i, comment_result in enumerate(high_intent_comments):
-                               
-                            try:
-                                template = random.choice(templates)
-                                template_content = template.get('content', '')
-                                
-                                comment_id = comment_result.get('id')
-                                if not comment_id:
+                        batch_size = 20  # 每批处理20条评论
+                        
+                        for batch_start in range(0, len(high_intent_comments), batch_size):
+                            batch_end = min(batch_start + batch_size, len(high_intent_comments))
+                            batch_comments = high_intent_comments[batch_start:batch_end]
+                            
+                            print(f"\n开始处理第 {batch_start//batch_size + 1} 批评论 ({batch_start+1}-{batch_end})")
+                            
+                            # 每批开始前重新初始化XHS操作器（除了第一批）
+                            if batch_start > 0:
+                                try:
+                                    print("重新初始化XHS操作器...")
+                                    xhs.close()
+                                    time.sleep(2)
+                                    xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=False, device_id=device_id)
+                                    previous_url = None  # 重置URL跟踪
+                                    print("XHS操作器重新初始化完成")
+                                except Exception as e:
+                                    print(f"重新初始化XHS操作器失败: {str(e)}")
                                     continue
+                            
+                            for i, comment_result in enumerate(batch_comments):
+                                global_index = batch_start + i
+                                max_retries = 2  # 最大重试次数
+                                retry_count = 0
+                                success = False
                                 
-                                # 检查评论内容是否为空，如果为空则跳过回复
-                                comment_content = comment_result.get('content', '')
-                                if not comment_content or not comment_content.strip():
-                                    print(f"跳过空评论ID: {comment_id}")
-                                    continue
-                                    
-                                current_url = comment_result.get('note_url', '')
-                                skip_url_open = (previous_url == current_url)
-                                
-                                # 检查下一条评论是否属于不同笔记，如果是则需要返回
-                                next_comment_different_note = False
-                                if i < len(high_intent_comments) - 1:  # 不是最后一条评论
-                                    next_url = high_intent_comments[i + 1].get('note_url', '')
-                                    next_comment_different_note = (current_url != next_url)
-                                
-                                image_urls = template['image_urls']
-                                has_image = image_urls is not None and image_urls != "null" and image_urls != ""
-                                if has_image:
-                                    print('图片url:',image_urls)
-                                    cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
+                                while retry_count <= max_retries and not success:
+                                    try:
+                                        if retry_count > 0:
+                                            print(f"第 {retry_count} 次重试回复评论ID: {comment_result.get('id')}")
+                                        
+                                        template = random.choice(templates)
+                                        template_content = template.get('content', '')
+                                        
+                                        comment_id = comment_result.get('id')
+                                        if not comment_id:
+                                            break
+                                        
+                                        # 检查评论内容是否为空，如果为空则跳过回复
+                                        comment_content = comment_result.get('content', '')
+                                        if not comment_content or not comment_content.strip():
+                                            print(f"跳过空评论ID: {comment_id}")
+                                            break
+                                            
+                                        current_url = comment_result.get('note_url', '')
+                                        # 如果是重试操作，不管是否为同一篇笔记都重新打开笔记
+                                        skip_url_open = (previous_url == current_url) and (retry_count == 0)
+                                        
+                                        # 检查下一条评论是否属于不同笔记，如果是则需要返回
+                                        next_comment_different_note = False
+                                        if global_index < len(high_intent_comments) - 1:  # 不是最后一条评论
+                                            next_url = high_intent_comments[global_index + 1].get('note_url', '')
+                                            next_comment_different_note = (current_url != next_url)
+                                        
+                                        image_urls = template['image_urls']
+                                        has_image = image_urls is not None and image_urls != "null" and image_urls != ""
+                                        if has_image:
+                                            print('图片url:',image_urls)
+                                            cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
 
-                                
-                                # 执行回复（这里使用现有的XHS操作器）
-                                success = xhs.comments_reply(
-                                    current_url,
-                                    comment_result.get('author', ''),
-                                    comment_content=comment_content,
-                                    reply_content=template_content,
-                                    has_image=has_image,
-                                    skip_url_open=skip_url_open
-                                )
-                                previous_url = current_url
-                                if success:
-                                    # 记录回复到数据库
-                                    insert_manual_reply(
-                                        comment_id=comment_id,
-                                        note_url=current_url,
-                                        author=comment_result.get('author', ''),
-                                        userInfo=email,
-                                        content=comment_content,
-                                        reply=template_content
-                                    )
-                                    reply_count += 1
-                                    print(f"成功回复评论ID: {comment_id}，内容: {template_content[:50]}...")
-                                    
-                                    # 如果下一条评论属于不同笔记，则点击返回按钮避免页面堆叠
-                                    if next_comment_different_note:
-                                        try:
-                                            back_btn = xhs.driver.find_element(
-                                                by=AppiumBy.XPATH,
-                                                value="//android.widget.Button[@content-desc='返回']"
+                                        
+                                        # 执行回复（这里使用现有的XHS操作器）
+                                        success = xhs.comments_reply(
+                                            current_url,
+                                            comment_result.get('author', ''),
+                                            comment_content=comment_content,
+                                            reply_content=template_content,
+                                            has_image=has_image,
+                                            skip_url_open=skip_url_open
+                                        )
+                                        previous_url = current_url
+                                        
+                                        if success:
+                                            # 记录回复到数据库
+                                            insert_manual_reply(
+                                                comment_id=comment_id,
+                                                note_url=current_url,
+                                                author=comment_result.get('author', ''),
+                                                userInfo=email,
+                                                content=comment_content,
+                                                reply=template_content
                                             )
-                                            back_btn.click()
-                                            time.sleep(0.5)
-                                            print(f"检测到下一条评论属于不同笔记，已执行返回操作")
-                                        except:
-                                            print(f"尝试点击返回按钮失败，继续处理下一条评论")
-                                            pass
-                                else:
-                                    print(f"回复评论ID {comment_id} 失败")
+                                            reply_count += 1
+                                            print(f"成功回复评论ID: {comment_id}，内容: {template_content[:50]}...")
+                                            
+                                            # 如果下一条评论属于不同笔记，则点击返回按钮避免页面堆叠
+                                            if next_comment_different_note:
+                                                try:
+                                                    back_btn = xhs.driver.find_element(
+                                                        by=AppiumBy.XPATH,
+                                                        value="//android.widget.Button[@content-desc='返回']"
+                                                    )
+                                                    back_btn.click()
+                                                    time.sleep(0.5)
+                                                    print(f"检测到下一条评论属于不同笔记，已执行返回操作")
+                                                except:
+                                                    print(f"尝试点击返回按钮失败，继续处理下一条评论")
+                                                    pass
+                                            break  # 成功后跳出重试循环
+                                        else:
+                                            print(f"回复评论ID {comment_id} 失败")
+                                            retry_count += 1
+                                            if retry_count <= max_retries:
+                                                print(f"准备进行第 {retry_count} 次重试...")
+                                                time.sleep(3)  # 重试前等待
+                                        
+                                    except Exception as e:
+                                        print(f"回复评论时出错: {str(e)}")
+                                        retry_count += 1
+                                        if retry_count <= max_retries:
+                                            print(f"准备进行第 {retry_count} 次重试...")
+                                            time.sleep(3)  # 重试前等待
+                                        continue
+                                
+                                if not success:
+                                    print(f"评论ID {comment_result.get('id')} 重试 {max_retries} 次后仍然失败，跳过")
                                     
                                 # 添加延迟避免操作过快
                                 time.sleep(random.uniform(2, 5))
-                                
-                            except Exception as e:
-                                print(f"回复评论时出错: {str(e)}")
-                                continue
+                            
+                            print(f"第 {batch_start//batch_size + 1} 批评论处理完成")
                     else:
                         print("没有找到需要回复的高/中意向评论")
                         
