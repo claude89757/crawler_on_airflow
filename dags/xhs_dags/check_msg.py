@@ -40,16 +40,23 @@ def save_msg_to_db(msg_list:list):
         """)
         db_conn.commit()
         
-        # 准备插入数据的SQL语句
+        # 准备插入和更新数据的SQL语句
         insert_sql = """
         INSERT INTO xhs_msg_list 
-        (userInfo, user_name, message_type,device_id, check_time, reply_status) 
-        VALUES (%s, %s, %s, %s, %s,%s)
+        (userInfo, user_name, message_type, device_id, check_time, reply_status, ask_content) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         
-        # 批量插入私信数据，添加去重功能
+        update_sql = """
+        UPDATE xhs_msg_list 
+        SET userInfo = %s, message_type = %s, device_id = %s, check_time = %s, reply_status = %s, ask_content = %s
+        WHERE user_name = %s
+        """
+        
+        # 批量处理私信数据，支持插入和更新
         insert_data = []
-        skipped_count = 0
+        update_data = []
+        updated_count = 0
         
         for msg in msg_list['unreplied_users']:
             username = msg.get('username', '')
@@ -57,28 +64,48 @@ def save_msg_to_db(msg_list:list):
             # 检查user_name是否已存在
             cursor.execute("SELECT 1 FROM xhs_msg_list WHERE user_name = %s LIMIT 1", (username,))
             if cursor.fetchone():
-                print(f"用户 {username} 已存在，跳过插入")
-                skipped_count += 1
-                continue
-            
-            # 如果不存在，添加到插入列表
-            insert_data.append((
-                msg_list.get('userInfo', ''),
-                username,
-                msg.get('message_type', ''),
-                msg_list.get('device_id',''),
-                msg_list.get('check_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                msg.get('reply_status', 0),
-                msg.get('ask_content', '')
-            ))
+                print(f"用户 {username} 已存在，执行更新")
+                # 如果存在，添加到更新列表
+                update_data.append((
+                    msg_list.get('userInfo', ''),
+                    msg.get('message_type', ''),
+                    msg_list.get('device_id',''),
+                    msg_list.get('check_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    msg.get('reply_status', 0),
+                    msg.get('ask_content', ''),
+                    username  # WHERE条件
+                ))
+                updated_count += 1
+            else:
+                # 如果不存在，添加到插入列表
+                insert_data.append((
+                    msg_list.get('userInfo', ''),
+                    username,
+                    msg.get('message_type', ''),
+                    msg_list.get('device_id',''),
+                    msg_list.get('check_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    msg.get('reply_status', 0),
+                    msg.get('ask_content', '')
+                ))
 
-        # 只有当有新数据时才执行插入
+        # 执行插入和更新操作
+        total_processed = 0
+        
         if insert_data:
             cursor.executemany(insert_sql, insert_data)
+            total_processed += len(insert_data)
+            print(f"成功插入 {len(insert_data)} 条新私信到数据库")
+        
+        if update_data:
+            cursor.executemany(update_sql, update_data)
+            total_processed += len(update_data)
+            print(f"成功更新 {len(update_data)} 条已存在用户的私信信息")
+        
+        if total_processed > 0:
             db_conn.commit()
-            print(f"成功保存 {len(insert_data)} 条新私信到数据库，跳过 {skipped_count} 条重复用户")
+            print(f"总共处理 {total_processed} 条私信记录（插入: {len(insert_data)}, 更新: {len(update_data)}）")
         else:
-            print(f"所有 {skipped_count} 条私信都是重复用户，未插入新数据")
+            print("没有需要处理的私信数据")
     except Exception as e:
         db_conn.rollback()
         print(f"保存私信到数据库失败: {str(e)}")
