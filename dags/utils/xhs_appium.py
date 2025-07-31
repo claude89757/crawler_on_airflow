@@ -2701,33 +2701,34 @@ class XHSOperator:
         except Exception as e:
             print('选择成功，返回评论界面')
             #返回评论界面
-           
+    #私信回复图片     
     def reply_with_image(self):
-        #定位到选择回复图片的元素
-        WebDriverWait(self.driver, 2).until(
-                    EC.presence_of_element_located((
-                        AppiumBy.XPATH,
-                        "(//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-'])[10]"
-                    ))
-                ).click()
-        time.sleep(1)  # 等待选择图片界面加载
-        WebDriverWait(self.driver, 2).until(
-                    EC.presence_of_element_located((
-                        AppiumBy.XPATH,
-                        "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='相册']"
-                    ))
-                ).click()
-        time.sleep(1)
-        WebDriverWait(self.driver, 2).until(
-                    EC.presence_of_element_located((
-                        AppiumBy.XPATH,
-                        "(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[5]"
-                    ))
-                ).click()
         try:
-            # 执行点击操作
-            # self.driver.tap([(674, 258)])
+            #定位到选择回复图片的元素
+            WebDriverWait(self.driver, 2).until(
+                        EC.presence_of_element_located((
+                            AppiumBy.XPATH,
+                            "(//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-'])[10]"
+                        ))
+                    ).click()
+            time.sleep(1)  # 等待选择图片界面加载
+            print('点击更多功能按钮成功')
+            WebDriverWait(self.driver, 2).until(
+                        EC.presence_of_element_located((
+                            AppiumBy.XPATH,
+                            "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='相册']"
+                        ))
+                    ).click()
+            time.sleep(1)
+            print('点击相册成功')
+            WebDriverWait(self.driver, 2).until(
+                        EC.presence_of_element_located((
+                            AppiumBy.XPATH,
+                            "(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[5]"
+                        ))
+                    ).click()
             print('选择第一张照片成功')
+            time.sleep(0.5)
         except Exception as e:
             print(f"点击屏幕失败: {str(e)}")
         #单选版本的点击图片后会自动返回评论界面
@@ -2735,7 +2736,7 @@ class XHSOperator:
             choice_btn=WebDriverWait(self.driver, 2).until(
                     EC.presence_of_element_located((
                         AppiumBy.XPATH,
-                        "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and  contains(@text,'完成')]"
+                        "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='发送 1']"
                     ))
                 )
             if choice_btn:
@@ -3299,6 +3300,8 @@ class XHSOperator:
                                         EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='发送']"))
                                 )
                                 send_frame.click()
+                                if has_image:
+                                    self.reply_with_image()
                                 print(f'{msg_author}的私信回复成功')
                                 #将回复的私信信息添加到返回列表
                                 replyed_msg_list.append({'msg_author':msg_author, 'msg_content':msg,'reply_time':time.strftime("%Y-%m-%d %H:%M:%S")})
@@ -3335,6 +3338,8 @@ class XHSOperator:
                                         EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='发送']"))
                                 )
                                 send_frame.click()
+                                if has_image:
+                                    self.reply_with_image()
                                 print(f'{msg_author}的私信回复成功')
                                 replyed_msg_list.append({'msg_author':msg_author, 'msg_content':msg,'reply_time':time.strftime("%Y-%m-%d %H:%M:%S")})
                                 #返回到正常私信列表
