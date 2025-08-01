@@ -3041,12 +3041,6 @@ class XHSOperator:
                             raise e
                    
                     return True
-                
-                except Exception as e:
-                    print(f"输入回复内容失败: {str(e)}")
-                    return False
-                
-                
             else:
                 print(f"笔记不存在或已被删除: {full_url}")
                 return False
