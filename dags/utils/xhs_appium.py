@@ -3029,7 +3029,7 @@ class XHSOperator:
                         send_button.click()
                         
                         print(f"成功回复评论: {reply_content}")
-                        break  # 成功则跳出重试循环
+                        return True
                         
                     except Exception as e:
                         print(f"评论回复失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
@@ -3040,7 +3040,7 @@ class XHSOperator:
                             print(f"评论回复重试{max_retries}次后仍然失败")
                             raise e
                    
-                    return True
+                
             else:
                 print(f"笔记不存在或已被删除: {full_url}")
                 return False

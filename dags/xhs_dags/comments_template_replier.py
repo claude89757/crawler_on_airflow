@@ -300,8 +300,8 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                 time.sleep(2)  # 增加延时，确保有足够时间处理下一条评论
                 
             except Exception as e:
-                print(f"设备 {device_id} 处理评论时出错: {str(e)}")
-                failed_replies += 1
+                print(f"设备 {device_id} 处理评论时出现未预期错误: {str(e)}")
+                # 注意：failed_replies的计算已经在重试机制中处理，这里不再重复计算
                 # 出错后等待时间稍长一些，避免连续失败
                 time.sleep(3)
                 continue
