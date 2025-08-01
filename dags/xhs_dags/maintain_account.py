@@ -77,7 +77,31 @@ def browse_xhs_notes(device_index=0, **context) -> None:
             # search_keyword_of_video 方法内部已经处理了视频的收集和处理
             # 该方法会返回收集到的视频列表
             print(f"开始收集视频笔记...")
-            collected_videos = xhs.search_keyword_of_video(keyword)
+            
+            # 带重试机制的视频搜索
+            max_retries = 3
+            collected_videos = None
+            
+            for attempt in range(max_retries):
+                try:
+                    collected_videos = xhs.search_keyword_of_video(keyword)
+                    break  # 成功则跳出循环
+                except Exception as e:
+                    print(f"视频搜索第{attempt + 1}次尝试失败: {str(e)}")
+                    if attempt < max_retries - 1:
+                        print("重新初始化小红书操作器并重试...")
+                        # 关闭当前操作器
+                        if xhs:
+                            try:
+                                xhs.close()
+                            except:
+                                pass
+                        # 重新初始化
+                        time.sleep(5)  # 等待5秒
+                        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
+                    else:
+                        print(f"视频搜索重试{max_retries}次后仍然失败")
+                        raise e
             
             # 处理收集到的视频数据
             if collected_videos:
@@ -92,9 +116,32 @@ def browse_xhs_notes(device_index=0, **context) -> None:
         else:
             # 使用默认搜索方法（图文）
             print(f"使用图文搜索方法搜索关键词: {keyword}")
-            xhs.search_keyword(keyword, filters={
-                "note_type": note_type
-            })
+            
+            # 带重试机制的图文搜索
+            max_retries = 3
+            
+            for attempt in range(max_retries):
+                try:
+                    xhs.search_keyword(keyword, filters={
+                        "note_type": note_type
+                    })
+                    break  # 成功则跳出循环
+                except Exception as e:
+                    print(f"图文搜索第{attempt + 1}次尝试失败: {str(e)}")
+                    if attempt < max_retries - 1:
+                        print("重新初始化小红书操作器并重试...")
+                        # 关闭当前操作器
+                        if xhs:
+                            try:
+                                xhs.close()
+                            except:
+                                pass
+                        # 重新初始化
+                        time.sleep(5)  # 等待5秒
+                        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
+                    else:
+                        print(f"图文搜索重试{max_retries}次后仍然失败")
+                        raise e
             
             print(f"开始浏览图文笔记...")
             xhs.print_all_elements()

@@ -93,6 +93,27 @@ class XHSOperator:
         )
         print('控制器初始化完成。')
         
+    def _retry_operation(self, operation_func, operation_name, max_retries=3):
+        """
+        重试操作的通用方法
+        Args:
+            operation_func: 要执行的操作函数
+            operation_name: 操作名称，用于日志输出
+            max_retries: 最大重试次数，默认3次
+        Returns:
+            操作函数的返回值
+        """
+        for attempt in range(max_retries):
+            try:
+                return operation_func()
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"{operation_name} 第{attempt + 1}次尝试失败: {str(e)}，正在重试...")
+                    time.sleep(1)  # 等待1秒后重试
+                else:
+                    print(f"{operation_name} 重试{max_retries}次后仍然失败: {str(e)}")
+                    raise e
+
     def search_keyword(self, keyword: str, filters: dict = None):
         """
         搜索关键词并应用筛选条件
@@ -106,95 +127,133 @@ class XHSOperator:
         """
         print(f"准备搜索关键词: {keyword}")
         try:
-            # 通过 content-desc="搜索" 定位搜索按钮
-            search_btn = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.Button[@content-desc='搜索']"))
-            )
-            search_btn.click()
+            # 通过 content-desc="搜索" 定位搜索按钮并点击
+            def click_search_btn():
+                search_btn = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.Button[@content-desc='搜索']"))
+                )
+                search_btn.click()
+                return search_btn
+            
+            self._retry_operation(click_search_btn, "点击搜索按钮")
             
             # 等待输入框出现并输入
-            search_input = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((AppiumBy.CLASS_NAME, "android.widget.EditText"))
-            )
-            search_input.send_keys(keyword)
+            def input_keyword():
+                search_input = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((AppiumBy.CLASS_NAME, "android.widget.EditText"))
+                )
+                search_input.send_keys(keyword)
+                return search_input
+            
+            self._retry_operation(input_keyword, "输入搜索关键词")
             
             # 点击键盘上的搜索按钮
-            self.driver.press_keycode(66)  # 66 是 Enter 键的 keycode
+            def press_search_key():
+                self.driver.press_keycode(66)  # 66 是 Enter 键的 keycode
+                return True
+            
+            self._retry_operation(press_search_key, "按下搜索键")
             print(f"已搜索关键词: {keyword}")
             
             # 等待搜索结果加载
             time.sleep(1)
 
             if filters:
-                try:
-                    # 先尝试点击筛选按钮
-                    all_btn = WebDriverWait(self.driver, 5).until(
-                            EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[contains(@text, '全部') or contains(@content-desc, '全部')]"))
-                        )
-                    all_btn.click()
-                    time.sleep(0.5)
-                except:
-                    # 如果找不到筛选按钮，尝试点击全部按钮
+                # 点击筛选或全部按钮
+                def click_filter_btn():
                     try:
+                        # 先尝试点击全部按钮
+                        all_btn = WebDriverWait(self.driver, 5).until(
+                                EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[contains(@text, '全部') or contains(@content-desc, '全部')]"))
+                            )
+                        all_btn.click()
+                        time.sleep(0.5)
+                        return all_btn
+                    except:
+                        # 如果找不到全部按钮，尝试点击筛选按钮
                         filter_btn = WebDriverWait(self.driver, 5).until(
-                        EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[contains(@text, '筛选') or contains(@content-desc, '筛选')]"))
-                    )
+                            EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[contains(@text, '筛选') or contains(@content-desc, '筛选')]"))
+                        )
                         filter_btn.click()
                         time.sleep(0.5)
-                    except Exception as e:
-                        print(f"找不到筛选按钮和全部按钮: {str(e)}")
-                        return
+                        return filter_btn
+                
+                try:
+                    self._retry_operation(click_filter_btn, "点击筛选按钮")
+                except Exception as e:
+                    print(f"找不到筛选按钮和全部按钮: {str(e)}")
+                    return
 
                 # 应用排序方式
                 if filters.get('sort_by'):
-                    sort_option = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((
-                            AppiumBy.XPATH, 
-                            f"//android.widget.TextView[@text='{filters['sort_by']}']"
-                        ))
-                    )
-                    sort_option.click()
-                    time.sleep(0.5)
+                    def click_sort_option():
+                        sort_option = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((
+                                AppiumBy.XPATH, 
+                                f"//android.widget.TextView[@text='{filters['sort_by']}']"
+                            ))
+                        )
+                        sort_option.click()
+                        time.sleep(0.5)
+                        return sort_option
+                    
+                    self._retry_operation(click_sort_option, f"选择排序方式: {filters['sort_by']}")
 
                 # 应用笔记类型
                 if filters.get('note_type'):
-                    note_type = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((
-                            AppiumBy.XPATH, 
-                            f"//android.widget.TextView[@text='{filters['note_type']}']"
-                        ))
-                    )
-                    note_type.click()
-                    time.sleep(0.5)
+                    def click_note_type():
+                        note_type = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((
+                                AppiumBy.XPATH, 
+                                f"//android.widget.TextView[@text='{filters['note_type']}']"
+                            ))
+                        )
+                        note_type.click()
+                        time.sleep(0.5)
+                        return note_type
+                    
+                    self._retry_operation(click_note_type, f"选择笔记类型: {filters['note_type']}")
 
                 # 应用发布时间
                 if filters.get('time_range'):
-                    time_range = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((
-                            AppiumBy.XPATH, 
-                            f"//android.widget.TextView[@text='{filters['time_range']}']"
-                        ))
-                    )
-                    time_range.click()
-                    time.sleep(0.5)
+                    def click_time_range():
+                        time_range = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((
+                                AppiumBy.XPATH, 
+                                f"//android.widget.TextView[@text='{filters['time_range']}']"
+                            ))
+                        )
+                        time_range.click()
+                        time.sleep(0.5)
+                        return time_range
+                    
+                    self._retry_operation(click_time_range, f"选择发布时间: {filters['time_range']}")
 
                 # 应用搜索范围
                 if filters.get('search_scope'):
-                    search_scope = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((
-                            AppiumBy.XPATH, 
-                            f"//android.widget.TextView[@text='{filters['search_scope']}']"
-                        ))
-                    )
-                    search_scope.click()
-                    time.sleep(0.5)
+                    def click_search_scope():
+                        search_scope = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((
+                                AppiumBy.XPATH, 
+                                f"//android.widget.TextView[@text='{filters['search_scope']}']"
+                            ))
+                        )
+                        search_scope.click()
+                        time.sleep(0.5)
+                        return search_scope
+                    
+                    self._retry_operation(click_search_scope, f"选择搜索范围: {filters['search_scope']}")
 
                 # 点击收起按钮
-                collapse_btn = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[@text='收起']"))
-                )
-                collapse_btn.click()
-                time.sleep(0.5)
+                def click_collapse_btn():
+                    collapse_btn = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[@text='收起']"))
+                    )
+                    collapse_btn.click()
+                    time.sleep(0.5)
+                    return collapse_btn
+                
+                self._retry_operation(click_collapse_btn, "点击收起按钮")
 
             print("筛选条件应用完成")
             
