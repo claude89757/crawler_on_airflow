@@ -98,7 +98,7 @@ def browse_xhs_notes(device_index=0, **context) -> None:
                                 pass
                         # 重新初始化
                         time.sleep(5)  # 等待5秒
-                        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
+                        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=False, device_id=device_id)
                     else:
                         print(f"视频搜索重试{max_retries}次后仍然失败")
                         raise e

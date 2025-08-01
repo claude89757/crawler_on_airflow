@@ -243,16 +243,34 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                     print('图片url:',image_urls)
                     cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
                 
-                # 调用评论回复功能
-                success = xhs.comments_reply(
-                    note_url=note_url,
-                    author=author,
-                    comment_content=comment_content,
-                    reply_content=reply_content,
-                    has_image=has_image,
-                    skip_url_open=skip_url_open,
-                    note_type=note_type
-                )
+                # 调用评论回复功能（带重试机制）
+                max_retries = 3
+                success = False
+                for attempt in range(max_retries):
+                    try:
+                        success = xhs.comments_reply(
+                            note_url=note_url,
+                            author=author,
+                            comment_content=comment_content,
+                            reply_content=reply_content,
+                            has_image=has_image,
+                            skip_url_open=skip_url_open,
+                            note_type=note_type
+                        )
+                        break  # 成功则跳出重试循环
+                    except Exception as e:
+                        print(f"评论回复失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                        if attempt < max_retries - 1:  # 不是最后一次尝试
+                            try:
+                                xhs.close()
+                            except:
+                                pass
+                            print(f"重新初始化操作器 (尝试 {attempt + 2}/{max_retries})")
+                            time.sleep(2)  # 等待2秒
+                            xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=False, device_id=device_id)
+                        else:
+                            print(f"评论回复重试{max_retries}次后仍然失败")
+                            success = False  # 确保success为False
                 
                 # 更新上一个URL
                 previous_url = note_url

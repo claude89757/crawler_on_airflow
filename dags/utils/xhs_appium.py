@@ -2997,35 +2997,48 @@ class XHSOperator:
                     print(f"未找到评论: {comment_content}")
                     return False
                 
-                # 点击评论
-                comment_element.click()
-                
-                # 等待输入框出现并输入内容
-                try:
-                    # 等待输入框出现
-                    reply_input = WebDriverWait(self.driver, 2).until(
-                        EC.presence_of_element_located((
-                            AppiumBy.CLASS_NAME,
-                            "android.widget.EditText"
-                        ))
-                    )
-                    # 输入回复内容
-                    reply_input.clear()
-                    reply_input.send_keys(reply_content)
+                # 评论回复重试机制
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        # 点击评论
+                        comment_element.click()
+                        
+                        # 等待输入框出现并输入内容
+                        # 等待输入框出现
+                        reply_input = WebDriverWait(self.driver, 2).until(
+                            EC.presence_of_element_located((
+                                AppiumBy.CLASS_NAME,
+                                "android.widget.EditText"
+                            ))
+                        )
+                        # 输入回复内容
+                        reply_input.clear()
+                        reply_input.send_keys(reply_content)
 
-                    if has_image:
-                        self.comments_reply_image()
-                    
-                    # 点击发送按钮
-                    send_button = WebDriverWait(self.driver, 1).until(
-                        EC.presence_of_element_located((
-                            AppiumBy.XPATH,
-                            "//android.widget.TextView[@text='发送']"
-                        ))
-                    )
-                    send_button.click()
-                    
-                    print(f"成功回复评论: {reply_content}")
+                        if has_image:
+                            self.comments_reply_image()
+                        
+                        # 点击发送按钮
+                        send_button = WebDriverWait(self.driver, 1).until(
+                            EC.presence_of_element_located((
+                                AppiumBy.XPATH,
+                                "//android.widget.TextView[@text='发送']"
+                            ))
+                        )
+                        send_button.click()
+                        
+                        print(f"成功回复评论: {reply_content}")
+                        break  # 成功则跳出重试循环
+                        
+                    except Exception as e:
+                        print(f"评论回复失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                        if attempt < max_retries - 1:  # 不是最后一次尝试
+                            print(f"等待1秒后重试...")
+                            time.sleep(1)
+                        else:
+                            print(f"评论回复重试{max_retries}次后仍然失败")
+                            raise e
                    
                     return True
                 
