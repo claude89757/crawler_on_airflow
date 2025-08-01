@@ -3308,7 +3308,6 @@ class XHSOperator:
             msg: 回复的消息内容
         """
 
-        unreplyed_msg_list = []
         # 点击“消息”，跳转到私信页面
         replyed_msg_list = []
         msg_btn = WebDriverWait(self.driver, 10).until(
@@ -3334,7 +3333,6 @@ class XHSOperator:
                                         )
                                         msg_author=msg_frame.find_element(by=AppiumBy.XPATH,value=".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-']").text
                                         #点击进入聊天界面
-                                        unreplyed_msg_list.append({'msg_author':msg_author, 'msg_content':"未回复"})
                                         msg_frame.click()
                                         time.sleep(0.5)  # 等待页面加载
                                         print(f"正在回复: {msg_author}的私信")
