@@ -104,19 +104,20 @@ def insert_many(query, data):
         return 0
 
 
-def add_message_template(content, email):
+def add_message_template(content, email, image_urls=None):
     """
     添加回复模板
     
     Args:
         content: 模板内容
         email: 用户邮箱，默认为zacks@example.com
+        image_urls: 图片URL列表，可选参数
         
     Returns:
         int: 受影响的行数
     """
-    query = "INSERT INTO message_template (userInfo, content) VALUES (%s, %s)"
-    params = (email, content)
+    query = "INSERT INTO message_template (userInfo, content, image_urls) VALUES (%s, %s, %s)"
+    params = (email, content, image_urls)
     return execute_update(query, params)
 
 
@@ -245,6 +246,7 @@ def main_handler(event, context):
         if action == 'add':
             # 添加单个模板
             content = params.get('content', '')
+            image_urls=params.get('image_urls','')
             if not content:
                 return {
                     "code": 1,
@@ -252,7 +254,7 @@ def main_handler(event, context):
                     "data": None
                 }
             
-            affected_rows = add_message_template(content, email)
+            affected_rows = add_message_template(content, email,image_urls)
             return {
                 "code": 0 if affected_rows > 0 else 1,
                 "message": "success" if affected_rows > 0 else "添加失败",
