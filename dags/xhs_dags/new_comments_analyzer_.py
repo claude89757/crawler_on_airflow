@@ -365,7 +365,7 @@ default_args = {
 }
 
 dag = DAG(
-    dag_id='comments_analyzer',
+    dag_id='new_comments_analyzer',
     default_args=default_args,
     description='使用Deepseek模型分析小红书评论的用户意向',
     schedule_interval=None,
