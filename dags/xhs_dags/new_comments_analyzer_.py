@@ -110,7 +110,7 @@ def _analyze_single_comment(industry: str, content: str, author: str, profile_se
                 inputs={'industry': industry, 'author': author, 'profile_sentence': profile_sentence,'content': content}
             )
 
-        result = full_answer
+        result = full_answer['answer']
         print(f"[WATCHER] AI分析意向获取成功: {result}")
         # 检查结果是否在预期的三种结果之一，如果不是，则使用简单的分类逻辑
         expected_results = ["高意向", "中意向", "低意向"]
