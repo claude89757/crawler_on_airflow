@@ -105,9 +105,8 @@ def _analyze_single_comment(industry: str, content: str, author: str, profile_se
     try:
         print(f"[WATCHER] 开始获取AI回复")
         full_answer = dify_agent.create_chat_message(
-                query=content,
                 user_id=dify_user_id,
-                inputs={'industry': industry, 'author': author, 'profile_sentence': profile_sentence}
+                inputs={'industry': industry, 'author': author, 'profile_sentence': profile_sentence,'comment': content}
             )
 
         result = full_answer
