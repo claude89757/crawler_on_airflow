@@ -180,6 +180,10 @@ def get_note_card(xhs, collected_notes, collected_titles):
     # 设置随机浏览的概率 (可以根据需求调整，这里设置为40%的概率会点开一篇笔记)
     browse_probability = 0.4
     
+    # 初始化连续0个笔记卡片的计数器（使用函数属性）
+    if not hasattr(get_note_card, 'zero_count'):
+        get_note_card.zero_count = 0
+    
     try:
         print("获取所有笔记卡片元素")
         note_cards = []
@@ -190,8 +194,25 @@ def get_note_card(xhs, collected_notes, collected_titles):
                 value="//android.widget.FrameLayout[@resource-id='com.xingin.xhs:id/-' and @clickable='true']"
             )
             print(f"获取笔记卡片成功，共{len(note_cards)}个")
+            
+            # 检查笔记卡片数量
+            if len(note_cards) == 0:
+                get_note_card.zero_count += 1
+                print(f"连续第{get_note_card.zero_count}次获取到0个笔记卡片")
+                if get_note_card.zero_count >= 5:
+                    print("连续5次获取到0个笔记卡片，停止收集")
+                    return
+            else:
+                # 重置计数器
+                get_note_card.zero_count = 0
+                
         except Exception as e:
             print(f"获取笔记卡片失败: {e}")
+            get_note_card.zero_count += 1
+            print(f"连续第{get_note_card.zero_count}次获取笔记卡片失败")
+            if get_note_card.zero_count >= 5:
+                print("连续5次获取笔记卡片失败，停止收集")
+                return
         for note_card in note_cards:
             try:
                 title_element = note_card.find_element(
