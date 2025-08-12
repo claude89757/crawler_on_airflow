@@ -2048,10 +2048,11 @@ class XHSOperator:
             time.sleep(0.5)
             attempts += 1
 
-    def publish_note(self, title: str, content: str,note_tags:str=None,note_at_user:str=None,note_location:str=None,note_visit_scale:str=None, successful_download_count: int = 0):
+    def publish_note(self, title: str, content: str,note_tags_list:list[str]=None,note_at_user:str=None,note_location:str=None,note_visit_scale:str=None, successful_download_count: int = 0):
         """
         发布笔记
         """
+        # 点击发布按钮
         self.driver.find_element(
                     by=AppiumBy.XPATH,
                     value="(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[13]"
@@ -2083,11 +2084,35 @@ class XHSOperator:
             by=AppiumBy.XPATH,
             value="//android.widget.EditText[@resource-id='com.xingin.xhs:id/-' and @text='添加标题']"
         ).send_keys(title)
+        
+        # 如果note_tags_list不为空，在笔记内容中加上话题标签
+        final_content = content
+        if note_tags_list and len(note_tags_list) > 0:
+            # 将每个标签加上#号并拼接到内容中
+            tags_text = ' '.join([f'#{tag}' for tag in note_tags_list])
+            final_content = f"{content} {tags_text}"
+            print(f"添加话题标签后的内容: {final_content}")
+        
         #输入笔记内容
         self.driver.find_element(
             by=AppiumBy.XPATH,
             value="//android.widget.EditText[@resource-id='com.xingin.xhs:id/-' and @text='添加正文']"
-        ).send_keys(content)
+        ).send_keys(final_content)
+
+        if note_visit_scale:
+            # 点击访问范围
+            self.driver.find_element(
+                by=AppiumBy.XPATH,
+                value="(//android.widget.LinearLayout[@resource-id='com.xingin.xhs:id/-'])[2]/android.view.ViewGroup"
+            ).click()
+            time.sleep(1)
+
+            # 选择访问范围
+            self.driver.find_element(
+                by=AppiumBy.XPATH,
+                value=f"//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='{note_visit_scale}']"
+            ).click()
+
         #发布笔记
         self.driver.find_element(
             by=AppiumBy.XPATH,
@@ -3488,7 +3513,7 @@ if __name__ == "__main__":
 
     try:
 
-        xhs.publish_note('测试标题','测试内容')
+        xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
         # try:
         #     upgrade_prompt = xhs.driver.find_elements(
         #         by=AppiumBy.XPATH,

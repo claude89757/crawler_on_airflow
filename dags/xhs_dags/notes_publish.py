@@ -119,10 +119,10 @@ def notes_publish(**context):
     email = context['dag_run'].conf.get('email')
     device_id=context['dag_run'].conf.get('deviceName')
     note_title=context['dag_run'].conf.get('note_title')
-    note_tags=context['dag_run'].conf.get('note_tags')
+    note_tags_list=context['dag_run'].conf.get('note_tags_list', [])
     note_at_user=context['dag_run'].conf.get('note_at_user')
-    note_location=context['dag_run'].conf.get('note_location')
-    note_visit_scale=context['dag_run'].conf.get('note_visit_scale')
+    note_location=context['dag_run'].conf.get('note_location', None)
+    note_visit_scale=context['dag_run'].conf.get('note_visit_scale', None) #公开可见，仅互关好友可见，仅自己可见
     note_content=context['dag_run'].conf.get('note_content')
     # template_ids = context['dag_run'].conf.get('template_ids', [])
     # 获取设备列表
@@ -169,8 +169,8 @@ def notes_publish(**context):
         
         print(f"总共成功下载 {successful_download_count} 张图片")
 
-        # 执行回复消息
-        success = xhs.publish_note(note_title,note_content,note_tags,note_at_user,note_location,note_visit_scale,successful_download_count)
+        # 执行发布笔记，传入话题标签列表和成功下载的图片数量
+        success = xhs.publish_note(note_title, note_content, note_tags_list, note_at_user, note_location, note_visit_scale, successful_download_count)
         
         # 如果成功发布笔记，更新数据库状态
         if success:
