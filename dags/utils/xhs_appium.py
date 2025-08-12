@@ -2048,11 +2048,54 @@ class XHSOperator:
             time.sleep(0.5)
             attempts += 1
 
-    def publish_note(self, title: str, content: str):
+    def publish_note(self, title: str, content: str,note_tags:str=None,note_at_user:str=None,note_location:str=None,note_visit_scale:str=None, successful_download_count: int = 0):
         """
         发布笔记
         """
-        pass
+        self.driver.find_element(
+                    by=AppiumBy.XPATH,
+                    value="(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[13]"
+                ).click()
+        time.sleep(1)
+        #根据successful_download_count数量,循环点击需要发布的图片
+        for i in range(successful_download_count):
+            # 计算每次点击的元素索引：第一次[4]，第二次[6]，第三次[8]...
+            element_index = 4 + (i * 2)
+            print(f"点击第{i+1}张图片，元素索引: [{element_index}]")
+            self.driver.find_element(
+                        by=AppiumBy.XPATH,
+                        value=f"(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[{element_index}]"
+                    ).click()
+            time.sleep(0.5)  # 每次点击后稍作等待
+        time.sleep(1)
+        self.driver.find_element(
+                    by=AppiumBy.XPATH,
+                    value="//android.widget.TextView[@content-desc='下一步']"
+                ).click()
+        time.sleep(1)
+        self.driver.find_element(
+                    by=AppiumBy.XPATH,
+                    value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='下一步']"
+                ).click()
+        time.sleep(1)
+        #输入笔记标题
+        self.driver.find_element(
+            by=AppiumBy.XPATH,
+            value="//android.widget.EditText[@resource-id='com.xingin.xhs:id/-' and @text='添加标题']"
+        ).send_keys(title)
+        #输入笔记内容
+        self.driver.find_element(
+            by=AppiumBy.XPATH,
+            value="//android.widget.EditText[@resource-id='com.xingin.xhs:id/-' and @text='添加正文']"
+        ).send_keys(content)
+        #发布笔记
+        self.driver.find_element(
+            by=AppiumBy.XPATH,
+            value="//android.widget.Button[@resource-id='com.xingin.xhs:id/-']"
+        ).click()
+        print(f'笔记发布成功,标题为:{title},笔记内容为:{content}')
+        return True
+        
     def get_redirect_url(self, short_url: str, max_retries: int = 3) :
         """
         带重试机制的重定向URL获取
@@ -3439,11 +3482,13 @@ if __name__ == "__main__":
     xhs = XHSOperator(
         appium_server_url=appium_server_url,
         force_app_launch=False,
-        device_id="ZY22FX5QQR",
+        device_id="ZY22FVZJFG",
         # system_port=8200
     )
 
     try:
+
+        xhs.publish_note('测试标题','测试内容')
         # try:
         #     upgrade_prompt = xhs.driver.find_elements(
         #         by=AppiumBy.XPATH,
@@ -3494,13 +3539,13 @@ if __name__ == "__main__":
         #     print("-" * 50)
 
         # 3 测试检查未回复私信功能
-        print("\n开始测试检查未回复私信功能...")
-        unreplied_result = xhs.check_unreplied_messages(1,'qq.com')
+        # print("\n开始测试检查未回复私信功能...")
+        # unreplied_result = xhs.check_unreplied_messages(1,'qq.com')
         
-        print(f"\n未回复私信检查结果:")
-        print(f"检查时间: {unreplied_result.get('check_time', 'N/A')}")
-        print(f"未回复总数: {unreplied_result.get('total_unreplied', 0)}")
-        print(f"涉及用户数: {len(unreplied_result.get('unreplied_users', []))}")
+        # print(f"\n未回复私信检查结果:")
+        # print(f"检查时间: {unreplied_result.get('check_time', 'N/A')}")
+        # print(f"未回复总数: {unreplied_result.get('total_unreplied', 0)}")
+        # print(f"涉及用户数: {len(unreplied_result.get('unreplied_users', []))}")
         
         # if unreplied_result.get('error'):
         #     print(f"检查过程中出现错误: {unreplied_result['error']}")
