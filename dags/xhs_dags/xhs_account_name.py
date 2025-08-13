@@ -97,5 +97,6 @@ with DAG(
                 'device_index': index,
             },
             provide_context=True
-                   
+            retries=3,
+            retry_delay=timedelta(seconds=10),
         )
