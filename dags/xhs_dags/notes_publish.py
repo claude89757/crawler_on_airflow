@@ -158,7 +158,7 @@ def notes_publish(**context):
             print(f"获取到的图片列表字符串: {img_list_str}")
             
             # 将字符串按逗号切割成多个URL路径
-            if img_list_str 
+            if img_list_str:
                 image_urls = [url.strip() for url in img_list_str.split(',') if url.strip()]
             else:
                 image_urls = []
