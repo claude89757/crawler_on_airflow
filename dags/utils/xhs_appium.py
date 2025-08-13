@@ -2055,7 +2055,7 @@ class XHSOperator:
         # 点击发布按钮
         self.driver.find_element(
                     by=AppiumBy.XPATH,
-                    value="(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[13]"
+                    value="//android.widget.RelativeLayout[@content-desc='发布']"
                 ).click()
         time.sleep(1)
         #根据successful_download_count数量,循环点击需要发布的图片
