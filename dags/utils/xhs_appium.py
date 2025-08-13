@@ -3488,7 +3488,17 @@ class XHSOperator:
                 print(f"{str(e)}")
 
         return replyed_msg_list        
-                
+    def get_account_name(self):
+        self.driver.find_element(
+            by=AppiumBy.XPATH,
+            value="//android.view.ViewGroup[@content-desc='我']").click()
+        time.sleep(1)
+        account_name = self.driver.find_element(
+            by=AppiumBy.XPATH,
+            value="//android.view.View[contains(@content-desc,'头像')]").get_attribute("content-desc").replace('头像,','').strip()
+        print(f"当前账号名称: {account_name}")
+        return account_name
+
 # 测试代码
 if __name__ == "__main__":
     # 加载.env文件
@@ -3512,8 +3522,8 @@ if __name__ == "__main__":
     )
 
     try:
-
-        xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
+        xhs.get_account_name()
+        # xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
         # try:
         #     upgrade_prompt = xhs.driver.find_elements(
         #         by=AppiumBy.XPATH,
