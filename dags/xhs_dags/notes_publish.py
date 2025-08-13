@@ -152,9 +152,20 @@ def notes_publish(**context):
     print(f"获取到的笔记模板: {note_template}")
     cos_base_url = Variable.get("XHS_NOTE_RESOURCE_COS_URL")
     try:
-       
-        image_urls = note_template['img_list']
-        print(f"获取到的图片列表: {image_urls}")
+        # note_template是一个列表，取第一个元素作为img_list字符串
+        if note_template and len(note_template) > 0:
+            img_list_str = note_template[0]  # 获取第一个img_list字符串
+            print(f"获取到的图片列表字符串: {img_list_str}")
+            
+            # 将字符串按逗号切割成多个URL路径
+            if img_list_str 
+                image_urls = [url.strip() for url in img_list_str.split(',') if url.strip()]
+            else:
+                image_urls = []
+        else:
+            image_urls = []
+            
+        print(f"切割后的图片URL列表: {image_urls}")
         
         # 初始化成功下载计数器
         successful_download_count = 0
