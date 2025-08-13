@@ -18,6 +18,7 @@ from utils.xhs_appium import XHSOperator
 
 
 def get_account_name(device_index,**context):
+    time.sleep(5*device_index)  # 随机等待1-3秒，避免频繁请求导致被封禁
     email = context['dag_run'].conf.get('email')
     # 获取设备列表
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
