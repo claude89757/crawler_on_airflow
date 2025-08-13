@@ -117,7 +117,7 @@ def notes_publish(**context):
     发布笔记
     """
     email = context['dag_run'].conf.get('email')
-    device_id=context['dag_run'].conf.get('deviceName')
+    device_id=context['dag_run'].conf.get('device_id')
     note_title=context['dag_run'].conf.get('note_title')
     note_tags_list=context['dag_run'].conf.get('note_tags_list', [])
     note_at_user=context['dag_run'].conf.get('note_at_user')
@@ -149,6 +149,7 @@ def notes_publish(**context):
     print(f"开始发布笔记'")
     xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
     note_template = get_note_template_from_db(email=email, note_title=note_title, device_id=device_id)
+    cos_base_url = Variable.get("XHS_NOTE_RESOURCE_COS_URL")
     try:
        
         image_urls = note_template['img_list']
@@ -160,7 +161,9 @@ def notes_publish(**context):
         for image_url in image_urls:
             print('图片url:',image_url)
             try:
-                cos_to_device_via_host(cos_url=image_url,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
+                cos_url=f'{cos_base_url}//{image_url}'
+                print(f"开始下载图片: {cos_url}")
+                cos_to_device_via_host(cos_url=cos_url,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
                 # cos下载成功，计数器加1
                 successful_download_count += 1
                 print(f"图片下载成功，当前成功下载数量: {successful_download_count}")
