@@ -149,6 +149,7 @@ def notes_publish(**context):
     print(f"开始发布笔记'")
     xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
     note_template = get_note_template_from_db(email=email, note_title=note_title, device_id=device_id)
+    print(f"获取到的笔记模板: {note_template}")
     cos_base_url = Variable.get("XHS_NOTE_RESOURCE_COS_URL")
     try:
        
