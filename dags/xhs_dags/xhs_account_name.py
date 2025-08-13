@@ -69,10 +69,10 @@ def get_account_name(device_index,**context):
             XHS_ACCOUNT_INFO[email].append({device_id: account_name})
         
         # 保存更新后的映射到Variable
-        Variable.set("XHS_ACCOUNT_NAME_MAPPING", XHS_ACCOUNT_INFO, serialize_json=True)
+        Variable.set("XHS_ACCOUNT_INFO", XHS_ACCOUNT_INFO, serialize_json=True)
         print(f"已更新账号名映射: {XHS_ACCOUNT_INFO}")
     
-        Variable.set("XHS_ACCOUNT_LIST", XHS_ACCOUNT_INFO, serialize_json=True)
+        Variable.set("XHS_ACCOUNT_INFO", XHS_ACCOUNT_INFO, serialize_json=True)
     finally:
         # 确保关闭XHS操作器
         if 'xhs' in locals():
