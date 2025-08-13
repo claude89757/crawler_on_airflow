@@ -19,7 +19,6 @@ from utils.xhs_appium import XHSOperator
 
 def get_account_name(device_index,**context):
     email = context['dag_run'].conf.get('email')
-    template_ids = context['dag_run'].conf.get('template_ids', [])
     # 获取设备列表
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
     device_info = next((device for device in device_info_list if device.get('email') == email), None)
@@ -47,6 +46,7 @@ def get_account_name(device_index,**context):
     # 获取原本账号信息
 
     XHS_ACCOUNT_INFO = Variable.get("XHS_ACCOUNT_INFO", default_var={}, deserialize_json=True)
+    print(f"当前账号信息: {XHS_ACCOUNT_INFO}")
     try:
 
         account_name = xhs.get_account_name()
@@ -90,7 +90,7 @@ with DAG(
 
     for index in range(15):
         PythonOperator(
-            task_id=f'msg_reply{index}',
+            task_id=f'xhs_account_name_colletor{index}',
             python_callable=get_account_name,
             op_kwargs={
                 'device_index': index,
