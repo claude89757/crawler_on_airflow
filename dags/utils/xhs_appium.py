@@ -2089,7 +2089,7 @@ class XHSOperator:
         final_content = content
         if note_tags_list and len(note_tags_list) > 0:
             # 将每个标签按照 #话题   #话题   格式拼接到内容中
-            tags_text = ''.join([f'#{tag.strip()}   ' for tag in note_tags_list])
+            tags_text = ' '.join([f'#{tag}[话题]#' for tag in note_tags_list])
             
             final_content = f"{content}{tags_text}"
             print(f"添加话题标签后的内容: {final_content}")
@@ -3523,7 +3523,7 @@ if __name__ == "__main__":
     )
 
     try:
-        xhs.get_account_name()
+        # xhs.test_fuc()
         # xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
         # try:
         #     upgrade_prompt = xhs.driver.find_elements(
