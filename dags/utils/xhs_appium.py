@@ -2088,8 +2088,8 @@ class XHSOperator:
         # 如果note_tags_list不为空，在笔记内容中加上话题标签
         final_content = content
         if note_tags_list and len(note_tags_list) > 0:
-            # 将每个标签加上#号并拼接到内容中
-            tags_text = ' '.join([f'#{tag}' for tag in note_tags_list])
+            # 将每个标签按照 #话题[话题]# 格式拼接到内容中
+            tags_text = ' '.join([f'#{tag}[话题]#' for tag in note_tags_list])
             final_content = f"{content} {tags_text}"
             print(f"添加话题标签后的内容: {final_content}")
         
