@@ -2089,7 +2089,7 @@ class XHSOperator:
         final_content = content
         if note_tags_list and len(note_tags_list) > 0:
             # 将每个标签按照 #话题[话题]# 格式拼接到内容中
-            tags_text = ' '.join([f'#{tag}   ' for tag in note_tags_list])
+            tags_text = ''.join([f'#{tag}   ' for tag in note_tags_list])
             final_content = f"{content} {tags_text}"
             print(f"添加话题标签后的内容: {final_content}")
         
