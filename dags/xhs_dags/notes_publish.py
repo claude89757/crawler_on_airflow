@@ -172,15 +172,26 @@ def notes_publish(**context):
         
         for image_url in image_urls:
             print('图片url:',image_url)
-            try:
-                cos_url=f'{cos_base_url}{image_url}'
-                print(f"开始下载图片: {cos_url}")
-                cos_to_device_via_host(cos_url=cos_url,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
-                # cos下载成功，计数器加1
-                successful_download_count += 1
-                print(f"图片下载成功，当前成功下载数量: {successful_download_count}")
-            except Exception as e:
-                print(f"图片下载失败: {image_url}, 错误: {str(e)}")
+            # 添加重试机制，默认重试3次
+            max_retries = 3
+            retry_count = 0
+            download_success = False
+            
+            while retry_count < max_retries and not download_success:
+                try:
+                    cos_url=f'{cos_base_url}{image_url}'
+                    print(f"开始下载图片 (第{retry_count + 1}次尝试): {cos_url}")
+                    cos_to_device_via_host(cos_url=cos_url,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
+                    # cos下载成功，计数器加1
+                    successful_download_count += 1
+                    download_success = True
+                    print(f"图片下载成功，当前成功下载数量: {successful_download_count}")
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        print(f"图片下载失败 (第{retry_count}次尝试): {image_url}, 错误: {str(e)}, 准备重试...")
+                    else:
+                        print(f"图片下载最终失败 (已重试{max_retries}次): {image_url}, 错误: {str(e)}")
         
         print(f"总共成功下载 {successful_download_count} 张图片")
 
