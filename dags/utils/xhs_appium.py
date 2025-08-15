@@ -3523,6 +3523,7 @@ if __name__ == "__main__":
     )
 
     try:
+        ''
         # xhs.test_fuc()
         # xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
         # try:
