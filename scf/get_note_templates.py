@@ -82,18 +82,21 @@ def execute_query(query, params):
         return []
 
 
-def get_xhs_note_templates_by_email(email):
+def get_xhs_note_templates_by_email(email, page=1, page_size=10):
     """
-    根据邮箱获取所有笔记模板
+    根据邮箱获取笔记模板（支持分页）
     
     Args:
         email: 用户邮箱
+        page: 页码，从1开始
+        page_size: 每页数量
         
     Returns:
         list: 笔记模板列表
     """
-    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC"
-    params = (email,)
+    offset = (page - 1) * page_size
+    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    params = (email, page_size, offset)
     return execute_query(query, params)
 
 
@@ -114,38 +117,46 @@ def get_xhs_note_template_by_id(template_id, email):
     return results[0] if results else None
 
 
-def get_xhs_note_templates_by_title(email, title_keyword=None):
+def get_xhs_note_templates_by_title(email, title_keyword=None, page=1, page_size=10):
     """
-    根据邮箱和标题关键词获取笔记模板
+    根据邮箱和标题关键词获取笔记模板（支持分页）
+    
+    Args:
+        email: 用户邮箱
+        title_keyword: 标题关键词，可选
+        page: 页码，从1开始
+        page_size: 每页数量
+        
+    Returns:
+        list: 笔记模板列表
+    """
+    offset = (page - 1) * page_size
+    if title_keyword:
+        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        params = (email, f"%{title_keyword}%", page_size, offset)
+    else:
+        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        params = (email, page_size, offset)
+    return execute_query(query, params)
+
+
+def get_xhs_note_templates_count(email, title_keyword=None):
+    """
+    获取用户的笔记模板总数
     
     Args:
         email: 用户邮箱
         title_keyword: 标题关键词，可选
         
     Returns:
-        list: 笔记模板列表
-    """
-    if title_keyword:
-        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s ORDER BY created_at DESC"
-        params = (email, f"%{title_keyword}%")
-    else:
-        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC"
-        params = (email,)
-    return execute_query(query, params)
-
-
-def get_xhs_note_templates_count(email):
-    """
-    获取用户的笔记模板总数
-    
-    Args:
-        email: 用户邮箱
-        
-    Returns:
         int: 模板总数
     """
-    query = "SELECT COUNT(*) as count FROM xhs_note_templates WHERE userInfo = %s"
-    params = (email,)
+    if title_keyword:
+        query = "SELECT COUNT(*) as count FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s"
+        params = (email, f"%{title_keyword}%")
+    else:
+        query = "SELECT COUNT(*) as count FROM xhs_note_templates WHERE userInfo = %s"
+        params = (email,)
     results = execute_query(query, params)
     return results[0]['count'] if results else 0
 
@@ -198,18 +209,36 @@ def main_handler(event, context):
     # 获取参数
     action = params.get('action', 'get_all')
     email = params.get('email', 'zacks@example.com')
+    page = int(params.get('page', 1))
+    page_size = int(params.get('page_size', 10))
+    
+    # 验证分页参数
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 100:
+        page_size = 10
     
     try:
         # 根据操作类型执行相应查询
         if action == 'get_all':
-            # 获取用户所有模板
-            templates = get_xhs_note_templates_by_email(email)
+            # 获取用户模板（分页）
+            templates = get_xhs_note_templates_by_email(email, page, page_size)
+            total_count = get_xhs_note_templates_count(email)
+            total_pages = (total_count + page_size - 1) // page_size  # 向上取整
+            
             return {
                 "code": 0,
                 "message": "success",
                 "data": {
                     "templates": templates,
-                    "total": len(templates)
+                    "pagination": {
+                        "current_page": page,
+                        "page_size": page_size,
+                        "total_count": total_count,
+                        "total_pages": total_pages,
+                        "has_next": page < total_pages,
+                        "has_prev": page > 1
+                    }
                 }
             }
             
@@ -233,27 +262,39 @@ def main_handler(event, context):
             }
             
         elif action == 'search':
-            # 根据标题关键词搜索模板
+            # 根据标题关键词搜索模板（分页）
             title_keyword = params.get('title_keyword')
-            templates = get_xhs_note_templates_by_title(email, title_keyword)
+            templates = get_xhs_note_templates_by_title(email, title_keyword, page, page_size)
+            total_count = get_xhs_note_templates_count(email, title_keyword)
+            total_pages = (total_count + page_size - 1) // page_size  # 向上取整
+            
             return {
                 "code": 0,
                 "message": "success",
                 "data": {
                     "templates": templates,
-                    "total": len(templates),
-                    "keyword": title_keyword
+                    "keyword": title_keyword,
+                    "pagination": {
+                        "current_page": page,
+                        "page_size": page_size,
+                        "total_count": total_count,
+                        "total_pages": total_pages,
+                        "has_next": page < total_pages,
+                        "has_prev": page > 1
+                    }
                 }
             }
             
         elif action == 'count':
             # 获取模板总数
-            count = get_xhs_note_templates_count(email)
+            title_keyword = params.get('title_keyword')
+            count = get_xhs_note_templates_count(email, title_keyword)
             return {
                 "code": 0,
                 "message": "success",
                 "data": {
-                    "count": count
+                    "count": count,
+                    "keyword": title_keyword
                 }
             }
             
@@ -279,8 +320,24 @@ if __name__ == "__main__":
     test_event = {
         'body': json.dumps({
             'action': 'get_all',
-            'email': 'zacks@example.com'
+            'email': 'zacks@example.com',
+            'page': 1,
+            'page_size': 5
         })
     }
     result = main_handler(test_event, {})
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    
+    # 测试搜索分页
+    search_event = {
+        'body': json.dumps({
+            'action': 'search',
+            'email': 'zacks@example.com',
+            'title_keyword': '测试',
+            'page': 1,
+            'page_size': 3
+        })
+    }
+    search_result = main_handler(search_event, {})
+    print("\n搜索结果:")
+    print(json.dumps(search_result, ensure_ascii=False, indent=2))
