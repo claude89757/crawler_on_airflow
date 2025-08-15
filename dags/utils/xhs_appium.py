@@ -81,8 +81,8 @@ class XHSOperator:
             forceAppLaunch=force_app_launch,  # 是否强制重启应用
             autoGrantPermissions=True,  # 自动授予权限
             newCommandTimeout=60,  # 命令超时时间
-            unicodeKeyboard=False,  # 禁用 Unicode 输入法
-            resetKeyboard=False,  # 禁用重置输入法
+            unicodeKeyboard=True,  # 启用 Unicode 输入法
+            resetKeyboard=True,  # 启用重置输入法
         )
 
         print('当前capabilities配置:', json.dumps(capabilities, ensure_ascii=False, indent=2))
