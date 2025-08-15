@@ -173,7 +173,7 @@ def notes_publish(**context):
         for image_url in image_urls:
             print('图片url:',image_url)
             try:
-                cos_url=f'{cos_base_url}//{image_url}'
+                cos_url=f'{cos_base_url}{image_url}'
                 print(f"开始下载图片: {cos_url}")
                 cos_to_device_via_host(cos_url=cos_url,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
                 # cos下载成功，计数器加1
