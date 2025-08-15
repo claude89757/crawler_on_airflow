@@ -104,7 +104,7 @@ def insert_many(query, data):
         return 0
 
 
-def add_xhs_note_templates(title, content, email, author=None, device_id=None, img_list=None):
+def add_xhs_note_templates(title, content, email, author=None, device_id=None, img_list=None, status=None):
     """
     添加笔记模板
     
@@ -115,12 +115,13 @@ def add_xhs_note_templates(title, content, email, author=None, device_id=None, i
         author: 作者，可选
         device_id: 发布笔记的设备号，可选
         img_list: 图片列表，可选
+        status: 模板状态，可选
         
     Returns:
         int: 受影响的行数
     """
-    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-    params = (title, content, email, author, device_id, img_list, datetime.now())
+    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list, status, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+    params = (title, content, email, author, device_id, img_list, status, datetime.now())
     return execute_update(query, params)
 
 
@@ -137,7 +138,7 @@ def add_xhs_note_templatess(templates, email):
     """
     if not templates:
         return 0
-    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list) VALUES (%s, %s, %s, %s, %s, %s)"
+    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list, status) VALUES (%s, %s, %s, %s, %s, %s, %s)"
     data = []
     for template in templates:
         if isinstance(template, dict):
@@ -147,11 +148,12 @@ def add_xhs_note_templatess(templates, email):
                 email,
                 template.get('author'),
                 template.get('device_id'),
-                template.get('img_list')
+                template.get('img_list'),
+                template.get('status')
             ))
         else:
             # 兼容旧格式，将字符串作为content处理
-            data.append(('', template, email, None, None, None))
+            data.append(('', template, email, None, None, None, None))
     return insert_many(query, data)
 
 
@@ -186,7 +188,7 @@ def delete_all_xhs_note_templatess(email):
     return execute_update(query, params)
 
 
-def update_xhs_note_templates(template_id, email, title=None, content=None, author=None, device_id=None, img_list=None):
+def update_xhs_note_templates(template_id, email, title=None, content=None, author=None, device_id=None, img_list=None, status=None):
     """
     更新指定ID的笔记模板内容
     
@@ -198,6 +200,7 @@ def update_xhs_note_templates(template_id, email, title=None, content=None, auth
         author: 作者，可选
         device_id: 发布笔记的设备号，可选
         img_list: 图片列表，可选
+        status: 模板状态，可选
         
     Returns:
         int: 受影响的行数
@@ -221,6 +224,9 @@ def update_xhs_note_templates(template_id, email, title=None, content=None, auth
     if img_list is not None:
         update_fields.append("img_list = %s")
         params.append(img_list)
+    if status is not None:
+        update_fields.append("status = %s")
+        params.append(status)
     
     if not update_fields:
         return 0
@@ -288,6 +294,7 @@ def main_handler(event, context):
             author = params.get('author')
             device_id = params.get('device_id')
             img_list = params.get('img_list')
+            status = params.get('status')
             
             if not title:
                 return {
@@ -303,7 +310,7 @@ def main_handler(event, context):
                     "data": None
                 }
             
-            affected_rows = add_xhs_note_templates(title, content, email, author, device_id, img_list)
+            affected_rows = add_xhs_note_templates(title, content, email, author, device_id, img_list, status)
             return {
                 "code": 0 if affected_rows > 0 else 1,
                 "message": "success" if affected_rows > 0 else "添加失败",
@@ -369,6 +376,7 @@ def main_handler(event, context):
             author = params.get('author')
             device_id = params.get('device_id')
             img_list = params.get('img_list')
+            status = params.get('status')
             
             if not template_id:
                 return {
@@ -378,14 +386,14 @@ def main_handler(event, context):
                 }
             
             # 检查是否至少有一个字段需要更新
-            if all(field is None for field in [title, content, author, device_id, img_list]):
+            if all(field is None for field in [title, content, author, device_id, img_list, status]):
                 return {
                     "code": 1,
                     "message": "至少需要提供一个要更新的字段",
                     "data": None
                 }
             
-            affected_rows = update_xhs_note_templates(template_id, email, title, content, author, device_id, img_list)
+            affected_rows = update_xhs_note_templates(template_id, email, title, content, author, device_id, img_list, status)
             return {
                 "code": 0 if affected_rows > 0 else 1,
                 "message": "success" if affected_rows > 0 else "更新失败",
@@ -420,7 +428,8 @@ if __name__ == "__main__":
             'content': '这是一个测试笔记内容',
             'author': '测试作者',
             'device_id': 'test_device_001',
-            'img_list': '["image1.jpg", "image2.jpg"]'
+            'img_list': '["image1.jpg", "image2.jpg"]',
+            'status': 'active'
         })
     }
     result = main_handler(test_event, {})
