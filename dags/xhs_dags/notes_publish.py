@@ -193,6 +193,7 @@ def notes_publish(**context):
             # 更新笔记状态到数据库
             update_note_status(note_title, 1)
         else:
+            update_note_status(note_title, -1)
             print("发布笔记失败")
             
     except Exception as e:
