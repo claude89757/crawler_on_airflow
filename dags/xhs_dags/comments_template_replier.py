@@ -7,6 +7,7 @@ from airflow.operators.python import PythonOperator
 from airflow.models.variable import Variable
 from airflow.hooks.base import BaseHook
 from airflow.exceptions import AirflowSkipException
+from appium.webdriver.common.appiumby import AppiumBy
 
 from utils.xhs_utils import cos_to_device_via_host
 
@@ -214,40 +215,79 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
         # 初始化小红书操作器（带重试机制）
         xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
         
-        # 处理每条分配的评论
+        # 分批处理评论
+        batch_size = 20  # 每批处理20条评论
         previous_url = None  # 跟踪上一个处理的URL
-        for i, comment in enumerate(comments_to_process):
-            try:
-                note_url = comment['note_url']
-                author = comment['author']
-                comment_content = comment['content']
-                comment_id = comment['comment_id']
-                note_type=comment['note_type']
-                print(f"设备 {device_id} 正在处理第 {i+1}/{len(comments_to_process)} 条评论 - 作者: {author}")
-                
-                #随机选择一条回复模板
-                reply_template = random.choice(reply_templates)
-                reply_content = reply_template['content']
-                image_urls = reply_template['image_urls']
-                has_image=image_urls is not None and image_urls != "null" and image_urls!=""
-                print(f"选择的回复模板: {reply_content}, has_image: {has_image}, image_urls: {image_urls}")
-                
-                # 判断是否需要跳过URL打开（如果与上一个URL相同）
-                skip_url_open = (previous_url == note_url)
-                if skip_url_open:
-                    print(f"检测到相同URL，跳过重新打开: {note_url}在当前笔记继续搜索待回复评论")
-                else:
-                    print(f"新的URL，需要重新打开: {note_url}")
-                
-                if has_image:
-                    print('图片url:',image_urls)
-                    cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
-                
-                # 调用评论回复功能（带重试机制）
-                max_retries = 3
+        
+        for batch_start in range(0, len(comments_to_process), batch_size):
+            batch_end = min(batch_start + batch_size, len(comments_to_process))
+            batch_comments = comments_to_process[batch_start:batch_end]
+            
+            print(f"\n开始处理第 {batch_start//batch_size + 1} 批评论 ({batch_start+1}-{batch_end})")
+            
+            # 每批开始前重新初始化XHS操作器（除了第一批）
+            if batch_start > 0:
+                try:
+                    print("重新初始化XHS操作器...")
+                    xhs.close()
+                    time.sleep(2)
+                    xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=False, device_id=device_id)
+                    previous_url = None  # 重置URL跟踪
+                    print("XHS操作器重新初始化完成")
+                except Exception as e:
+                    print(f"重新初始化XHS操作器失败: {str(e)}")
+                    continue
+            
+            # 处理当前批次的评论
+            for i, comment in enumerate(batch_comments):
+                global_index = batch_start + i
+                max_retries = 2  # 最大重试次数
+                retry_count = 0
                 success = False
-                for attempt in range(max_retries):
+                
+                while retry_count <= max_retries and not success:
                     try:
+                        if retry_count > 0:
+                            print(f"第 {retry_count} 次重试回复评论ID: {comment.get('comment_id')}")
+                        
+                        note_url = comment['note_url']
+                        author = comment['author']
+                        comment_content = comment['content']
+                        comment_id = comment['comment_id']
+                        note_type = comment.get('note_type', '')
+                        
+                        # 检查评论内容是否为空，如果为空则跳过回复
+                        if not comment_content or not comment_content.strip():
+                            print(f"跳过空评论ID: {comment_id}")
+                            break
+                        
+                        print(f"设备 {device_id} 正在处理第 {global_index+1}/{len(comments_to_process)} 条评论 - 作者: {author}")
+                        
+                        # 随机选择一条回复模板
+                        reply_template = random.choice(reply_templates)
+                        reply_content = reply_template['content']
+                        image_urls = reply_template['image_urls']
+                        has_image = image_urls is not None and image_urls != "null" and image_urls != ""
+                        print(f"选择的回复模板: {reply_content}, has_image: {has_image}, image_urls: {image_urls}")
+                        
+                        # 如果是重试操作，不管是否为同一篇笔记都重新打开笔记
+                        skip_url_open = (previous_url == note_url) and (retry_count == 0)
+                        if skip_url_open:
+                            print(f"检测到相同URL，跳过重新打开: {note_url}在当前笔记继续搜索待回复评论")
+                        else:
+                            print(f"新的URL，需要重新打开: {note_url}")
+                        
+                        # 检查下一条评论是否属于不同笔记，如果是则需要返回
+                        next_comment_different_note = False
+                        if global_index < len(comments_to_process) - 1:  # 不是最后一条评论
+                            next_url = comments_to_process[global_index + 1].get('note_url', '')
+                            next_comment_different_note = (note_url != next_url)
+                        
+                        if has_image:
+                            print('图片url:',image_urls)
+                            cos_to_device_via_host(cos_url=image_urls,host_address=device_ip,host_username=username,device_id=device_id,host_password=password,host_port=host_port)
+                        
+                        # 执行回复
                         success = xhs.comments_reply(
                             note_url=note_url,
                             author=author,
@@ -257,54 +297,73 @@ def reply_with_template(comments_to_process:list, device_index: int = 0,email: s
                             skip_url_open=skip_url_open,
                             note_type=note_type
                         )
-                        break  # 成功则跳出重试循环
-                    except Exception as e:
-                        print(f"评论回复失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
-                        if attempt < max_retries - 1:  # 不是最后一次尝试
+                        previous_url = note_url
+                        
+                        if success:
+                            # 记录回复到数据库
                             try:
-                                xhs.close()
-                            except:
-                                pass
-                            print(f"重新初始化操作器 (尝试 {attempt + 2}/{max_retries})")
-                            time.sleep(2)  # 等待2秒
-                            xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=False, device_id=device_id)
+                                insert_manual_reply(
+                                    comment_id=comment_id,
+                                    note_url=note_url,
+                                    author=author,
+                                    userInfo=email,
+                                    content=comment_content,
+                                    reply=reply_content
+                                )
+                            except Exception as db_err:
+                                print(f"插入回复记录到数据库失败: {str(db_err)}")
+                            
+                            successful_replies += 1
+                            print(f"成功回复评论ID: {comment_id}，内容: {reply_content[:50]}...")
+                            
+                            # 如果下一条评论属于不同笔记，则点击返回按钮避免页面堆叠
+                            if next_comment_different_note:
+                                try:
+                                    back_btn = xhs.driver.find_element(
+                                        by=AppiumBy.XPATH,
+                                        value="//android.widget.Button[@content-desc='返回']"
+                                    )
+                                    back_btn.click()
+                                    time.sleep(0.5)
+                                    print(f"检测到下一条评论属于不同笔记，已执行返回操作")
+                                except:
+                                    print(f"尝试点击返回按钮失败，继续处理下一条评论")
+                                    pass
+                            break  # 成功后跳出重试循环
                         else:
-                            print(f"评论回复重试{max_retries}次后仍然失败")
-                            success = False  # 确保success为False
+                            print(f"回复评论ID {comment_id} 失败")
+                            retry_count += 1
+                            if retry_count <= max_retries:
+                                print(f"准备进行第 {retry_count} 次重试...")
+                                time.sleep(3)  # 重试前等待
+                        
+                    except Exception as e:
+                        print(f"回复评论时出错: {str(e)}")
+                        retry_count += 1
+                        if retry_count <= max_retries:
+                            print(f"准备进行第 {retry_count} 次重试...")
+                            time.sleep(3)  # 重试前等待
+                        continue
                 
-                # 更新上一个URL
-                previous_url = note_url
-                
-                if success:
-                    print(f"设备 {device_id} 成功回复评论: {comment_content}")
-                    # 插入到manual_reply表
-                    try:
-                        # 使用DAG配置中的email作为userInfo
-                        insert_manual_reply(
-                            comment_id=comment_id,
-                            note_url=note_url,
-                            author=author,
-                            userInfo=email,
-                            content=comment_content,
-                            reply=reply_content
-                        )
-                    except Exception as db_err:
-                        print(f"插入回复记录到数据库失败: {str(db_err)}")
-                    
-                    successful_replies += 1
-                else:
-                    print(f"设备 {device_id} 回复评论失败: {comment_content}")
+                if not success:
+                    print(f"评论ID {comment.get('comment_id')} 重试 {max_retries} 次后仍然失败，跳过")
                     failed_replies += 1
-                
-                # 添加延时，避免操作过快
-                time.sleep(2)  # 增加延时，确保有足够时间处理下一条评论
-                
-            except Exception as e:
-                print(f"设备 {device_id} 处理评论时出现未预期错误: {str(e)}")
-                # 注意：failed_replies的计算已经在重试机制中处理，这里不再重复计算
-                # 出错后等待时间稍长一些，避免连续失败
-                time.sleep(3)
-                continue
+                    # 回复失败后重新初始化XHS操作器
+                    try:
+                        print("回复失败，重新初始化XHS操作器...")
+                        xhs.close()
+                        time.sleep(2)
+                        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=False, device_id=device_id)
+                        previous_url = None  # 重置URL跟踪
+                        print("XHS操作器重新初始化完成")
+                    except Exception as e:
+                        print(f"重新初始化XHS操作器失败: {str(e)}")
+                        # 如果重新初始化失败，继续使用原有的操作器
+                    
+                # 添加延迟避免操作过快
+                time.sleep(random.uniform(2, 5))
+            
+            print(f"第 {batch_start//batch_size + 1} 批评论处理完成")
         
         print(f"设备 {device_id} 完成评论回复任务，成功回复: {successful_replies}/{len(comments_to_process)}，失败: {failed_replies}")
         return successful_replies
