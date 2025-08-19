@@ -95,7 +95,7 @@ def get_xhs_note_templates_by_email(email, page=1, page_size=10):
         list: 笔记模板列表
     """
     offset = (page - 1) * page_size
-    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
     params = (email, page_size, offset)
     return execute_query(query, params)
 
@@ -111,7 +111,7 @@ def get_xhs_note_template_by_id(template_id, email):
     Returns:
         dict: 笔记模板信息，如果不存在返回None
     """
-    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE id = %s AND userInfo = %s"
+    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE id = %s AND userInfo = %s"
     params = (template_id, email)
     results = execute_query(query, params)
     return results[0] if results else None
@@ -132,33 +132,87 @@ def get_xhs_note_templates_by_title(email, title_keyword=None, page=1, page_size
     """
     offset = (page - 1) * page_size
     if title_keyword:
-        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
         params = (email, f"%{title_keyword}%", page_size, offset)
     else:
-        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
         params = (email, page_size, offset)
     return execute_query(query, params)
 
 
-def get_xhs_note_templates_count(email, title_keyword=None):
+def get_xhs_note_templates_count(email, title_keyword=None, note_tags=None, visiable_scale=None):
     """
     获取用户的笔记模板总数
     
     Args:
         email: 用户邮箱
         title_keyword: 标题关键词，可选
+        note_tags: 笔记标签关键词，可选
+        visiable_scale: 可见范围，可选
         
     Returns:
         int: 模板总数
     """
+    conditions = ["userInfo = %s"]
+    params = [email]
+    
     if title_keyword:
-        query = "SELECT COUNT(*) as count FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s"
-        params = (email, f"%{title_keyword}%")
-    else:
-        query = "SELECT COUNT(*) as count FROM xhs_note_templates WHERE userInfo = %s"
-        params = (email,)
-    results = execute_query(query, params)
+        conditions.append("title LIKE %s")
+        params.append(f"%{title_keyword}%")
+    
+    if note_tags:
+        conditions.append("note_tags LIKE %s")
+        params.append(f"%{note_tags}%")
+    
+    if visiable_scale:
+        conditions.append("visiable_scale = %s")
+        params.append(visiable_scale)
+    
+    query = f"SELECT COUNT(*) as count FROM xhs_note_templates WHERE {' AND '.join(conditions)}"
+    results = execute_query(query, tuple(params))
     return results[0]['count'] if results else 0
+
+
+def get_xhs_note_templates_advanced_search(email, title_keyword=None, note_tags=None, visiable_scale=None, status=None, page=1, page_size=10):
+    """
+    高级搜索笔记模板（支持多字段搜索和分页）
+    
+    Args:
+        email: 用户邮箱
+        title_keyword: 标题关键词，可选
+        note_tags: 笔记标签关键词，可选
+        visiable_scale: 可见范围，可选
+        status: 发布状态，可选
+        page: 页码，从1开始
+        page_size: 每页数量
+        
+    Returns:
+        list: 笔记模板列表
+    """
+    offset = (page - 1) * page_size
+    conditions = ["userInfo = %s"]
+    params = [email]
+    
+    if title_keyword:
+        conditions.append("title LIKE %s")
+        params.append(f"%{title_keyword}%")
+    
+    if note_tags:
+        conditions.append("note_tags LIKE %s")
+        params.append(f"%{note_tags}%")
+    
+    if visiable_scale:
+        conditions.append("visiable_scale = %s")
+        params.append(visiable_scale)
+    
+    if status is not None:
+        conditions.append("status = %s")
+        params.append(status)
+    
+    query = f"SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE {' AND '.join(conditions)} ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    params.extend([page_size, offset])
+    
+    return execute_query(query, tuple(params))
 
 
 def main_handler(event, context):
@@ -285,16 +339,60 @@ def main_handler(event, context):
                 }
             }
             
+        elif action == 'advanced_search':
+            # 高级搜索模板（支持多字段搜索和分页）
+            title_keyword = params.get('title_keyword')
+            note_tags = params.get('note_tags')
+            visiable_scale = params.get('visiable_scale')
+            status = params.get('status')
+            if status is not None:
+                try:
+                    status = int(status)
+                except (ValueError, TypeError):
+                    status = None
+            
+            templates = get_xhs_note_templates_advanced_search(email, title_keyword, note_tags, visiable_scale, status, page, page_size)
+            total_count = get_xhs_note_templates_count(email, title_keyword, note_tags, visiable_scale)
+            total_pages = (total_count + page_size - 1) // page_size  # 向上取整
+            
+            return {
+                "code": 0,
+                "message": "success",
+                "data": {
+                    "templates": templates,
+                    "search_params": {
+                        "title_keyword": title_keyword,
+                        "note_tags": note_tags,
+                        "visiable_scale": visiable_scale,
+                        "status": status
+                    },
+                    "pagination": {
+                        "current_page": page,
+                        "page_size": page_size,
+                        "total_count": total_count,
+                        "total_pages": total_pages,
+                        "has_next": page < total_pages,
+                        "has_prev": page > 1
+                    }
+                }
+            }
+            
         elif action == 'count':
             # 获取模板总数
             title_keyword = params.get('title_keyword')
-            count = get_xhs_note_templates_count(email, title_keyword)
+            note_tags = params.get('note_tags')
+            visiable_scale = params.get('visiable_scale')
+            count = get_xhs_note_templates_count(email, title_keyword, note_tags, visiable_scale)
             return {
                 "code": 0,
                 "message": "success",
                 "data": {
                     "count": count,
-                    "keyword": title_keyword
+                    "search_params": {
+                        "title_keyword": title_keyword,
+                        "note_tags": note_tags,
+                        "visiable_scale": visiable_scale
+                    }
                 }
             }
             
@@ -341,3 +439,33 @@ if __name__ == "__main__":
     search_result = main_handler(search_event, {})
     print("\n搜索结果:")
     print(json.dumps(search_result, ensure_ascii=False, indent=2))
+    
+    # 测试高级搜索
+    advanced_search_event = {
+        'body': json.dumps({
+            'action': 'advanced_search',
+            'email': 'zacks@example.com',
+            'title_keyword': '旅游',
+            'note_tags': '美食',
+            'visiable_scale': '公开',
+            'status': 1,
+            'page': 1,
+            'page_size': 5
+        })
+    }
+    advanced_search_result = main_handler(advanced_search_event, {})
+    print("\n高级搜索结果:")
+    print(json.dumps(advanced_search_result, ensure_ascii=False, indent=2))
+    
+    # 测试计数功能
+    count_event = {
+        'body': json.dumps({
+            'action': 'count',
+            'email': 'zacks@example.com',
+            'note_tags': '旅游',
+            'visiable_scale': '公开'
+        })
+    }
+    count_result = main_handler(count_event, {})
+    print("\n计数结果:")
+    print(json.dumps(count_result, ensure_ascii=False, indent=2))
