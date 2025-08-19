@@ -3521,7 +3521,7 @@ class XHSOperator:
                 EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.RelativeLayout[contains(@content-desc,'评论和@')]"))
         )
         print(f"找到评论和@按钮: {btn.get_attribute('content-desc')}")
-        if  '未读' in btn.get_attribute('@content-desc') :
+        if  '未读' in btn.get_attribute('content-desc') :
             print("检查到未读评论,执行回复逻辑")
             btn.click()
         else:
