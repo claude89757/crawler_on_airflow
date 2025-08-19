@@ -3489,6 +3489,7 @@ class XHSOperator:
                 print(f"{str(e)}")
 
         return replyed_msg_list        
+    
     def get_account_name(self):
         self.driver.find_element(
             by=AppiumBy.XPATH,
@@ -3499,6 +3500,55 @@ class XHSOperator:
             value="//android.view.View[contains(@content-desc,'头像')]").get_attribute("content-desc").replace('头像,','').strip()
         print(f"当前账号名称: {account_name}")
         return account_name
+    
+    def reply_at_and_comment(self,reply_content):
+        """
+        回复消息
+        Args:
+            msg: 回复的消息内容
+        """
+        need_to_reply = True
+
+        # 点击“消息”，跳转到@和评论页面
+        
+        WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[contains(@resource-id,'com.xingin.xhs:id/-') and contains(@text, '消息')]"))
+        ).click()
+
+
+        #点击@和评论按钮
+        btn=WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.RelativeLayout[contains(@content-desc,'评论和@')]"))
+        )
+        print(f"找到评论和@按钮: {btn.get_attribute('@content-desc')}")
+        if  '未读' in btn.get_attribute('@content-desc') :
+            print("检查到未读评论,执行回复逻辑")
+            btn.click()
+        else:
+            print("没有未读评论,不执行回复逻辑")
+            return True
+        target_area=WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((AppiumBy.XPATH, "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']"))
+        )        
+        
+        # 搜索target_area下的所有"回复"TextView元素
+        reply_elements = target_area.find_elements(AppiumBy.XPATH, ".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='回复']")
+        print(f"找到 {len(reply_elements)} 个回复元素")
+        for i, target in enumerate(reply_elements):
+            try:
+                target.click()
+                time.sleep(1)
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.EditText[@resource-id='com.xingin.xhs:id/-']"))
+            ).send_keys(reply_content)
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='发送']"))
+            ).click()   
+                time.sleep(1)
+            except Exception as e:
+                print(f"第{i+1}个回复失败: {e}")
+
+
 
 # 测试代码
 if __name__ == "__main__":
@@ -3524,7 +3574,7 @@ if __name__ == "__main__":
 
     try:
         ''
-        # xhs.test_fuc()
+        xhs.reply_at_and_comment()
         # xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
         # try:
         #     upgrade_prompt = xhs.driver.find_elements(
