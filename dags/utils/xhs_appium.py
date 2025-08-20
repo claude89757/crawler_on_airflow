@@ -3501,14 +3501,14 @@ class XHSOperator:
         print(f"当前账号名称: {account_name}")
         return account_name
     
-    def reply_at_and_comment(self,reply_content):
+    def reply_at_and_comment(self,reply_content,device_id,userInfo):
         """
         回复消息
         Args:
             msg: 回复的消息内容
         """
         need_to_reply = True
-
+        replied_list=[]
         # 点击“消息”，跳转到@和评论页面
         
         WebDriverWait(self.driver, 10).until(
@@ -3520,36 +3520,94 @@ class XHSOperator:
         btn=WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.RelativeLayout[contains(@content-desc,'评论和@')]"))
         )
-        print(f"找到评论和@按钮: {btn.get_attribute('content-desc')}")
+        unreplied_count = btn.find_elements(AppiumBy.XPATH, ".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-']")[0].text
+        print(f'未回复的评论和@数量为{unreplied_count}')
+        
+        # 计算需要翻页的次数
+        unreplied_count_int = int(unreplied_count)
+        page_count = unreplied_count_int // 6  # 每页显示6条，计算需要翻页次数
+        print(f'需要翻页次数: {page_count}')
         if  '未读' in btn.get_attribute('content-desc') :
             print("检查到未读评论,执行回复逻辑")
             btn.click()
         else:
             print("没有未读评论,不执行回复逻辑")
             return True
-        target_area=WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((AppiumBy.XPATH, "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']"))
-        )        
+        # 大循环：根据翻页次数处理所有评论
+        for page in range(page_count + 1):  # +1是因为第一页不需要翻页
+            print(f"正在处理第 {page + 1} 页")
+            
+            # 如果不是第一页，需要先翻页
+            if page > 0:
+                print(f"执行第 {page} 次翻页")
+                self.scroll_down()  # 向下滚动翻页
+                time.sleep(1)  # 等待页面加载
+            
+            target_area=WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((AppiumBy.XPATH, "//androidx.recyclerview.widget.RecyclerView[@resource-id='com.xingin.xhs:id/-']"))
+            )        
+            
+            # 搜索target_area下的所有RelativeLayout元素
+            reply_elements = target_area.find_elements(AppiumBy.XPATH, ".//android.widget.RelativeLayout[@resource-id='com.xingin.xhs:id/-']")
+            print(f"第 {page + 1} 页找到 {len(reply_elements)} 个回复元素")
+            
+            # 处理当前页的所有回复元素
+            for i, target in enumerate(reply_elements):
+                try:
+                    # 搜索当前元素下的所有TextView元素
+                    text_views = target.find_elements(AppiumBy.XPATH, ".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-']")
+                    
+                    # 获取用户名（第一个TextView）
+                    username = ""
+                    if len(text_views) >= 1:
+                        username = text_views[0].text
+                    
+                    # 获取评论内容（第五个TextView）
+                    comment_content = ""
+                    if len(text_views) >= 5:
+                        comment_content = text_views[4].text  # 索引从0开始，第5个是索引4
+                    
+                    # 检查该用户名和评论内容是否已经回复过
+                    already_replied = False
+                    for replied_item in replied_list:
+                        if replied_item.get("username") == username and replied_item.get("comment_content") == comment_content:
+                            already_replied = True
+                            break
+                    
+                    if already_replied:
+                        print(f"用户 {username} 的评论 '{comment_content}' 已经回复过，跳过")
+                        continue
+                    
+                    print(f"正在回复{username}的评论: {comment_content}")
+                    #点击回复按钮
+                    target.find_element(AppiumBy.XPATH, ".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='回复']").click()
+                    
+                    time.sleep(1)
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.EditText[@resource-id='com.xingin.xhs:id/-']"))
+                    ).send_keys(reply_content)
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='发送']"))
+                    ).click()   
+                    time.sleep(1)
+                    replied_list.append({
+                        "username": username,
+                        "comment_content": comment_content,
+                        "device_id": device_id,
+                        "userInfo": userInfo,
+                        "reply_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "reply_content": reply_content
+                    })
+                except Exception as e:
+                     print(f"第{i+1}个回复失败: {e}")
+                     #大多失败原有是元素点击失败，尝试下滑
+                     self.scroll_down()
+            
+            print(f"第 {page + 1} 页处理完成")
         
-        # 搜索target_area下的所有"回复"TextView元素
-        reply_elements = target_area.find_elements(AppiumBy.XPATH, ".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='回复']")
-        print(f"找到 {len(reply_elements)} 个回复元素")
-        for i, target in enumerate(reply_elements):
-            try:
-                target.click()
-                time.sleep(1)
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.EditText[@resource-id='com.xingin.xhs:id/-']"))
-            ).send_keys(reply_content)
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='发送']"))
-            ).click()   
-                time.sleep(1)
-            except Exception as e:
-                print(f"第{i+1}个回复失败: {e}")
-
-
-
+        print(f"所有 {page_count + 1} 页处理完成，共回复 {len(replied_list)} 条评论")
+        print(replied_list)
+        return replied_list
 # 测试代码
 if __name__ == "__main__":
     # 加载.env文件
@@ -3574,7 +3632,7 @@ if __name__ == "__main__":
 
     try:
         ''
-        xhs.reply_at_and_comment()
+        xhs.reply_at_and_comment('ssss','111','111')
         # xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
         # try:
         #     upgrade_prompt = xhs.driver.find_elements(

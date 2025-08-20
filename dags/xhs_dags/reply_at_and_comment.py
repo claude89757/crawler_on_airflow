@@ -14,6 +14,67 @@ from airflow.exceptions import AirflowSkipException
 from appium.webdriver.common.appiumby import AppiumBy
 from utils.xhs_appium import XHSOperator
 
+def save_replied_data_to_db(replied_list):
+    """
+    将回复数据保存到xhs_recomment_list表中
+    Args:
+        replied_list: 已回复的评论列表，包含username、userInfo、reply_content等字段
+    """
+    if not replied_list:
+        print("没有需要保存的回复数据")
+        return
+        
+    db_hook = BaseHook.get_connection("xhs_db").get_hook()
+    db_conn = db_hook.get_conn()
+    cursor = db_conn.cursor()
+    
+    try:
+        # 插入SQL语句
+        insert_sql = """
+        INSERT INTO xhs_recomment_list 
+        (user_name, userInfo, reply_content, device_id, comment_content, reply_time) 
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        
+        inserted_count = 0
+        for reply_data in replied_list:
+            username = reply_data.get('username', '')
+            userInfo = reply_data.get('userInfo', '')
+            reply_content = reply_data.get('reply_content', '')
+            device_id = reply_data.get('device_id', '')
+            comment_content = reply_data.get('comment_content', '')
+            reply_time = reply_data.get('reply_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            
+            if not username:
+                print("跳过无效的回复记录（缺少username）")
+                continue
+                
+            try:
+                cursor.execute(insert_sql, (
+                    username,
+                    userInfo,
+                    reply_content,
+                    device_id,
+                    comment_content,
+                    reply_time
+                ))
+                inserted_count += 1
+                print(f"成功保存用户 {username} 的回复记录: {reply_content}")
+            except Exception as e:
+                print(f"保存用户 {username} 的回复记录失败: {str(e)}")
+                continue
+        
+        db_conn.commit()
+        print(f"总共保存了 {inserted_count} 条回复记录到xhs_recomment_list表")
+        
+    except Exception as e:
+        db_conn.rollback()
+        print(f"保存回复数据失败: {str(e)}")
+        raise
+    finally:
+        cursor.close()
+        db_conn.close()
+
 def reply_at_and_comment(device_index,**context):
     email = context['dag_run'].conf.get('email')
     reply_content = context['dag_run'].conf.get('reply_content')
@@ -43,9 +104,11 @@ def reply_at_and_comment(device_index,**context):
     xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
     try:
         # 执行回复消息
-        xhs.reply_at_and_comment(reply_content)
+        replied_list=xhs.reply_at_and_comment(reply_content,device_id,email)
         
-       
+        # 保存回复数据到数据库
+        if replied_list:
+            save_replied_data_to_db(replied_list)
             
     except Exception as e:
         print(f"回复评论过程中出错: {str(e)}")
