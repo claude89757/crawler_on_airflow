@@ -3520,9 +3520,14 @@ class XHSOperator:
         btn=WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((AppiumBy.XPATH, "//android.widget.RelativeLayout[contains(@content-desc,'评论和@')]"))
         )
-        unreplied_count = btn.find_elements(AppiumBy.XPATH, ".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-']")[0].text
-        print(f'未回复的评论和@数量为{unreplied_count}')
-        
+        try:
+            unreplied_count = btn.find_elements(AppiumBy.XPATH, ".//android.widget.TextView[@resource-id='com.xingin.xhs:id/-']")[0].text
+            print(f'未回复的评论和@数量为{unreplied_count}')
+        except:
+            print("没有未回复的评论和@")
+
+            return []
+
         # 计算需要翻页的次数
         unreplied_count_int = int(unreplied_count)
         page_count = unreplied_count_int // 6  # 每页显示6条，计算需要翻页次数
