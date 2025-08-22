@@ -104,7 +104,7 @@ def insert_many(query, data):
         return 0
 
 
-def add_xhs_note_templates(title, content, email, author=None, device_id=None, img_list=None, status=None, visiable_scale=None, note_tags=None, at_users=None):
+def add_xhs_note_templates(title, content, email, author=None, device_id=None, img_list=None, status=None, visiable_scale=None, note_tags=None, at_users=None, note_type=None):
     """
     添加笔记模板
     
@@ -119,12 +119,13 @@ def add_xhs_note_templates(title, content, email, author=None, device_id=None, i
         visiable_scale: 可见范围，可选
         note_tags: 笔记标签，可选
         at_users: @用户列表，可选
+        note_type: 笔记类型（视频/图片），可选
         
     Returns:
         int: 受影响的行数
     """
-    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-    params = (title, content, email, author, device_id, img_list, status, visiable_scale, note_tags, at_users, datetime.now())
+    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, type, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    params = (title, content, email, author, device_id, img_list, status, visiable_scale, note_tags, at_users, note_type, datetime.now())
     return execute_update(query, params)
 
 
@@ -141,7 +142,7 @@ def add_xhs_note_templatess(templates, email):
     """
     if not templates:
         return 0
-    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    query = "INSERT INTO xhs_note_templates (title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, type) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
     data = []
     for template in templates:
         if isinstance(template, dict):
@@ -155,11 +156,12 @@ def add_xhs_note_templatess(templates, email):
                 template.get('status'),
                 template.get('visiable_scale'),
                 template.get('note_tags'),
-                template.get('at_users')
+                template.get('at_users'),
+                template.get('type')
             ))
         else:
             # 兼容旧格式，将字符串作为content处理
-            data.append(('', template, email, None, None, None, None, None, None, None))
+            data.append(('', template, email, None, None, None, None, None, None, None, None))
     return insert_many(query, data)
 
 
@@ -194,7 +196,7 @@ def delete_all_xhs_note_templatess(email):
     return execute_update(query, params)
 
 
-def update_xhs_note_templates(template_id, email, title=None, content=None, author=None, device_id=None, img_list=None, status=None, visiable_scale=None, note_tags=None, at_users=None):
+def update_xhs_note_templates(template_id, email, title=None, content=None, author=None, device_id=None, img_list=None, status=None, visiable_scale=None, note_tags=None, at_users=None, note_type=None):
     """
     更新指定ID的笔记模板内容
     
@@ -210,6 +212,7 @@ def update_xhs_note_templates(template_id, email, title=None, content=None, auth
         visiable_scale: 可见范围，可选
         note_tags: 笔记标签，可选
         at_users: @用户列表，可选
+        note_type: 笔记类型（视频/图片），可选
         
     Returns:
         int: 受影响的行数
@@ -245,6 +248,9 @@ def update_xhs_note_templates(template_id, email, title=None, content=None, auth
     if at_users is not None:
         update_fields.append("at_users = %s")
         params.append(at_users)
+    if note_type is not None:
+        update_fields.append("type = %s")
+        params.append(note_type)
     
     if not update_fields:
         return 0
@@ -316,6 +322,7 @@ def main_handler(event, context):
             visiable_scale = params.get('visiable_scale')
             note_tags = params.get('note_tags')
             at_users = params.get('at_users')
+            note_type = params.get('type')
             
             if not title:
                 return {
@@ -331,7 +338,7 @@ def main_handler(event, context):
                     "data": None
                 }
             
-            affected_rows = add_xhs_note_templates(title, content, email, author, device_id, img_list, status, visiable_scale, note_tags, at_users)
+            affected_rows = add_xhs_note_templates(title, content, email, author, device_id, img_list, status, visiable_scale, note_tags, at_users, note_type)
             return {
                 "code": 0 if affected_rows > 0 else 1,
                 "message": "success" if affected_rows > 0 else "添加失败",
@@ -401,6 +408,7 @@ def main_handler(event, context):
             visiable_scale = params.get('visiable_scale')
             note_tags = params.get('note_tags')
             at_users = params.get('at_users')
+            note_type = params.get('type')
             
             if not template_id:
                 return {
@@ -410,14 +418,14 @@ def main_handler(event, context):
                 }
             
             # 检查是否至少有一个字段需要更新
-            if all(field is None for field in [title, content, author, device_id, img_list, status, visiable_scale, note_tags, at_users]):
+            if all(field is None for field in [title, content, author, device_id, img_list, status, visiable_scale, note_tags, at_users, note_type]):
                 return {
                     "code": 1,
                     "message": "至少需要提供一个要更新的字段",
                     "data": None
                 }
             
-            affected_rows = update_xhs_note_templates(template_id, email, title, content, author, device_id, img_list, status, visiable_scale, note_tags, at_users)
+            affected_rows = update_xhs_note_templates(template_id, email, title, content, author, device_id, img_list, status, visiable_scale, note_tags, at_users, note_type)
             return {
                 "code": 0 if affected_rows > 0 else 1,
                 "message": "success" if affected_rows > 0 else "更新失败",
@@ -456,7 +464,8 @@ if __name__ == "__main__":
             'status': 1,
             'visiable_scale': '公开',
             'note_tags': '旅游,美食,生活',
-            'at_users': '@用户1,@用户2'
+            'at_users': '@用户1,@用户2',
+            'type': '图片'
         })
     }
     result = main_handler(test_event, {})

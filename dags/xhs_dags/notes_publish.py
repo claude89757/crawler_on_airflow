@@ -16,11 +16,12 @@ from utils.xhs_utils import cos_to_device_via_host
 from utils.xhs_appium import XHSOperator
 
 
-def update_note_status(note_title, status):
-    """根据笔记标题更新xhs_note_templates表中的发布状态
+def update_note_status(note_title, status, note_type=None):
+    """根据笔记标题更新xhs_note_templates表中的发布状态和类型
     Args:
         note_title: 笔记标题
         status: 新的状态 (1代表发布成功)
+        note_type: 笔记类型（视频/图片）
     """
     if not note_title:
         print("没有需要更新的笔记标题")
@@ -31,10 +32,13 @@ def update_note_status(note_title, status):
     cursor = db_conn.cursor()
     
     try:
-        # 根据笔记标题更新status字段
-        update_sql = "UPDATE xhs_note_templates SET status = %s WHERE title = %s"
-        
-        cursor.execute(update_sql, (status, note_title))
+        # 根据笔记标题更新status字段和type字段
+        if note_type is not None:
+            update_sql = "UPDATE xhs_note_templates SET status = %s, type = %s WHERE title = %s"
+            cursor.execute(update_sql, (status, note_type, note_title))
+        else:
+            update_sql = "UPDATE xhs_note_templates SET status = %s WHERE title = %s"
+            cursor.execute(update_sql, (status, note_title))
         
         if cursor.rowcount > 0:
             db_conn.commit()

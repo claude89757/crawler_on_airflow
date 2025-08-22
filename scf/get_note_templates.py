@@ -95,7 +95,7 @@ def get_xhs_note_templates_by_email(email, page=1, page_size=10):
         list: 笔记模板列表
     """
     offset = (page - 1) * page_size
-    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, type, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
     params = (email, page_size, offset)
     return execute_query(query, params)
 
@@ -111,7 +111,7 @@ def get_xhs_note_template_by_id(template_id, email):
     Returns:
         dict: 笔记模板信息，如果不存在返回None
     """
-    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE id = %s AND userInfo = %s"
+    query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, type, created_at FROM xhs_note_templates WHERE id = %s AND userInfo = %s"
     params = (template_id, email)
     results = execute_query(query, params)
     return results[0] if results else None
@@ -132,15 +132,15 @@ def get_xhs_note_templates_by_title(email, title_keyword=None, page=1, page_size
     """
     offset = (page - 1) * page_size
     if title_keyword:
-        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, type, created_at FROM xhs_note_templates WHERE userInfo = %s AND title LIKE %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
         params = (email, f"%{title_keyword}%", page_size, offset)
     else:
-        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        query = "SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, type, created_at FROM xhs_note_templates WHERE userInfo = %s ORDER BY created_at DESC LIMIT %s OFFSET %s"
         params = (email, page_size, offset)
     return execute_query(query, params)
 
 
-def get_xhs_note_templates_count(email, title_keyword=None, note_tags=None, visiable_scale=None):
+def get_xhs_note_templates_count(email, title_keyword=None, note_tags=None, visiable_scale=None, note_type=None):
     """
     获取用户的笔记模板总数
     
@@ -149,6 +149,7 @@ def get_xhs_note_templates_count(email, title_keyword=None, note_tags=None, visi
         title_keyword: 标题关键词，可选
         note_tags: 笔记标签关键词，可选
         visiable_scale: 可见范围，可选
+        note_type: 笔记类型，可选
         
     Returns:
         int: 模板总数
@@ -168,12 +169,16 @@ def get_xhs_note_templates_count(email, title_keyword=None, note_tags=None, visi
         conditions.append("visiable_scale = %s")
         params.append(visiable_scale)
     
+    if note_type:
+        conditions.append("type = %s")
+        params.append(note_type)
+    
     query = f"SELECT COUNT(*) as count FROM xhs_note_templates WHERE {' AND '.join(conditions)}"
     results = execute_query(query, tuple(params))
     return results[0]['count'] if results else 0
 
 
-def get_xhs_note_templates_advanced_search(email, title_keyword=None, note_tags=None, visiable_scale=None, status=None, page=1, page_size=10):
+def get_xhs_note_templates_advanced_search(email, title_keyword=None, note_tags=None, visiable_scale=None, status=None, note_type=None, page=1, page_size=10):
     """
     高级搜索笔记模板（支持多字段搜索和分页）
     
@@ -183,6 +188,7 @@ def get_xhs_note_templates_advanced_search(email, title_keyword=None, note_tags=
         note_tags: 笔记标签关键词，可选
         visiable_scale: 可见范围，可选
         status: 发布状态，可选
+        note_type: 笔记类型，可选
         page: 页码，从1开始
         page_size: 每页数量
         
@@ -209,7 +215,11 @@ def get_xhs_note_templates_advanced_search(email, title_keyword=None, note_tags=
         conditions.append("status = %s")
         params.append(status)
     
-    query = f"SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, created_at FROM xhs_note_templates WHERE {' AND '.join(conditions)} ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    if note_type:
+        conditions.append("type = %s")
+        params.append(note_type)
+    
+    query = f"SELECT id, title, content, userInfo, author, device_id, img_list, status, visiable_scale, note_tags, at_users, type, created_at FROM xhs_note_templates WHERE {' AND '.join(conditions)} ORDER BY created_at DESC LIMIT %s OFFSET %s"
     params.extend([page_size, offset])
     
     return execute_query(query, tuple(params))
@@ -344,6 +354,7 @@ def main_handler(event, context):
             title_keyword = params.get('title_keyword')
             note_tags = params.get('note_tags')
             visiable_scale = params.get('visiable_scale')
+            note_type = params.get('type')
             status = params.get('status')
             if status is not None:
                 try:
@@ -351,8 +362,8 @@ def main_handler(event, context):
                 except (ValueError, TypeError):
                     status = None
             
-            templates = get_xhs_note_templates_advanced_search(email, title_keyword, note_tags, visiable_scale, status, page, page_size)
-            total_count = get_xhs_note_templates_count(email, title_keyword, note_tags, visiable_scale)
+            templates = get_xhs_note_templates_advanced_search(email, title_keyword, note_tags, visiable_scale, status, note_type, page, page_size)
+            total_count = get_xhs_note_templates_count(email, title_keyword, note_tags, visiable_scale, note_type)
             total_pages = (total_count + page_size - 1) // page_size  # 向上取整
             
             return {
@@ -364,7 +375,8 @@ def main_handler(event, context):
                         "title_keyword": title_keyword,
                         "note_tags": note_tags,
                         "visiable_scale": visiable_scale,
-                        "status": status
+                        "status": status,
+                        "type": note_type
                     },
                     "pagination": {
                         "current_page": page,
@@ -382,7 +394,8 @@ def main_handler(event, context):
             title_keyword = params.get('title_keyword')
             note_tags = params.get('note_tags')
             visiable_scale = params.get('visiable_scale')
-            count = get_xhs_note_templates_count(email, title_keyword, note_tags, visiable_scale)
+            note_type = params.get('type')
+            count = get_xhs_note_templates_count(email, title_keyword, note_tags, visiable_scale, note_type)
             return {
                 "code": 0,
                 "message": "success",
@@ -391,7 +404,8 @@ def main_handler(event, context):
                     "search_params": {
                         "title_keyword": title_keyword,
                         "note_tags": note_tags,
-                        "visiable_scale": visiable_scale
+                        "visiable_scale": visiable_scale,
+                        "type": note_type
                     }
                 }
             }
@@ -449,6 +463,7 @@ if __name__ == "__main__":
             'note_tags': '美食',
             'visiable_scale': '公开',
             'status': 1,
+            'type': '图片',
             'page': 1,
             'page_size': 5
         })
@@ -463,7 +478,8 @@ if __name__ == "__main__":
             'action': 'count',
             'email': 'zacks@example.com',
             'note_tags': '旅游',
-            'visiable_scale': '公开'
+            'visiable_scale': '公开',
+            'type': '图片'
         })
     }
     count_result = main_handler(count_event, {})
