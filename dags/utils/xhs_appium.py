@@ -2097,7 +2097,7 @@ class XHSOperator:
         #输入笔记内容
         self.driver.find_element(
             by=AppiumBy.XPATH,
-            value="//android.widget.EditText[@resource-id='com.xingin.xhs:id/-' and @text='添加正文']"
+            value="//android.widget.EditText[@resource-id='com.xingin.xhs:id/-' and contains(@text, '添加')]"
         ).send_keys(final_content)
 
         if note_visit_scale:
@@ -3637,8 +3637,8 @@ if __name__ == "__main__":
 
     try:
         ''
-        xhs.reply_at_and_comment('ssss','111','111')
-        # xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=4)
+        # xhs.reply_at_and_comment('ssss','111','111')
+        xhs.publish_note('测试标题','测试内容', note_tags_list=['测试标签'], note_at_user='测试用户', note_location='测试位置', note_visit_scale='公开可见', successful_download_count=1)
         # try:
         #     upgrade_prompt = xhs.driver.find_elements(
         #         by=AppiumBy.XPATH,
