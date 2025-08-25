@@ -120,42 +120,40 @@ def notes_publish(**context):
     """
     发布笔记
     """
-    email = context['dag_run'].conf.get('email')
-    device_id=context['dag_run'].conf.get('device_id')
-    note_title=context['dag_run'].conf.get('note_title')
-    note_tags_list=context['dag_run'].conf.get('note_tags_list', [])
-    note_at_user=context['dag_run'].conf.get('note_at_user')
-    note_location=context['dag_run'].conf.get('note_location', None)
-    note_visit_scale=context['dag_run'].conf.get('note_visit_scale', None) #公开可见，仅互关好友可见，仅自己可见
-    note_content=context['dag_run'].conf.get('note_content')
-    # template_ids = context['dag_run'].conf.get('template_ids', [])
-    # 获取设备列表
-    device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
-    device_info = next((device for device in device_info_list if device.get('email') == email), None)
-    if device_info:
-        print(f"device_info: {device_info}")
-    else:
-        raise ValueError("email参数不能为空")
-    # 获取设备信息
     try:
+        email = context['dag_run'].conf.get('email')
+        device_id=context['dag_run'].conf.get('device_id')
+        note_title=context['dag_run'].conf.get('note_title')
+        note_tags_list=context['dag_run'].conf.get('note_tags_list', [])
+        note_at_user=context['dag_run'].conf.get('note_at_user')
+        note_location=context['dag_run'].conf.get('note_location', None)
+        note_visit_scale=context['dag_run'].conf.get('note_visit_scale', None) #公开可见，仅互关好友可见，仅自己可见
+        note_content=context['dag_run'].conf.get('note_content')
+        # template_ids = context['dag_run'].conf.get('template_ids', [])
+        # 获取设备列表
+        device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
+        device_info = next((device for device in device_info_list if device.get('email') == email), None)
+        if device_info:
+            print(f"device_info: {device_info}")
+        else:
+            raise ValueError("email参数不能为空")
+        # 获取设备信息
+    
         device_ip = device_info.get('device_ip')
-        host_port=device_info.get('port')
+        host_port = device_info.get('port')
         appium_port = device_info.get('available_appium_ports')[0]
         username = device_info.get('username')
         password = device_info.get('password')
-    except Exception as e:
-        print(f"获取设备信息失败: {e}")
-        print(f"跳过当前任务，因为获取设备信息失败")
-        raise AirflowSkipException("设备信息获取失败")
-    appium_server_url = f"http://{device_ip}:{appium_port}"
-    
-    print(f"选择设备 {device_id}, appium_server_url: {appium_server_url}")
-    print(f"开始发布笔记'")
-    xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
-    note_template = get_note_template_from_db(email=email, note_title=note_title, device_id=device_id)
-    print(f"获取到的笔记模板: {note_template}")
-    cos_base_url = Variable.get("XHS_NOTE_RESOURCE_COS_URL")
-    try:
+
+        appium_server_url = f"http://{device_ip}:{appium_port}"
+        
+        print(f"选择设备 {device_id}, appium_server_url: {appium_server_url}")
+        print(f"开始发布笔记'")
+        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
+        note_template = get_note_template_from_db(email=email, note_title=note_title, device_id=device_id)
+        print(f"获取到的笔记模板: {note_template}")
+        cos_base_url = Variable.get("XHS_NOTE_RESOURCE_COS_URL")
+
         # note_template是一个列表，取第一个元素作为img_list字符串
         if note_template and len(note_template) > 0:
             img_list_str = note_template[0]  # 获取第一个img_list字符串
@@ -210,15 +208,12 @@ def notes_publish(**context):
         else:
             update_note_status(note_title, -1)
             print("发布笔记失败")
-            
     except Exception as e:
         update_note_status(note_title, -1)
-        print("发布笔记失败")
-        print(f"发布笔记过程中出错: {str(e)}")
-        
-        raise
+        print(f"发布笔记过程中发生错误: {str(e)}")
     finally:
         # 确保关闭XHS操作器
+
         if 'xhs' in locals():
             xhs.close()
 with DAG(
