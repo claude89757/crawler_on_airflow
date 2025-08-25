@@ -2053,31 +2053,45 @@ class XHSOperator:
         发布笔记
         """
         # 点击发布按钮
-        self.driver.find_element(
-                    by=AppiumBy.XPATH,
-                    value="//android.widget.RelativeLayout[@content-desc='发布']"
-                ).click()
+        def click_publish_button():
+            self.driver.find_element(
+                        by=AppiumBy.XPATH,
+                        value="//android.widget.RelativeLayout[@content-desc='发布']"
+                    ).click()
+        self._retry_operation(click_publish_button, "点击发布按钮")
         time.sleep(1)
+        
         #根据successful_download_count数量,循环点击需要发布的图片
         for i in range(successful_download_count):
             # 计算每次点击的元素索引：第一次[4]，第二次[6]，第三次[8]...
             element_index = 4 + (i * 2)
             print(f"点击第{i+1}张图片，元素索引: [{element_index}]")
-            self.driver.find_element(
-                        by=AppiumBy.XPATH,
-                        value=f"(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[{element_index}]"
-                    ).click()
+            
+            def click_image():
+                self.driver.find_element(
+                            by=AppiumBy.XPATH,
+                            value=f"(//android.widget.ImageView[@resource-id='com.xingin.xhs:id/-'])[{element_index}]"
+                        ).click()
+            self._retry_operation(click_image, f"点击第{i+1}张图片")
             time.sleep(0.5)  # 每次点击后稍作等待
         time.sleep(1)
-        self.driver.find_element(
-                    by=AppiumBy.XPATH,
-                    value="//android.widget.TextView[@content-desc='下一步']"
-                ).click()
+        
+        # 点击第一个下一步按钮
+        def click_first_next_button():
+            self.driver.find_element(
+                        by=AppiumBy.XPATH,
+                        value="//android.widget.TextView[@content-desc='下一步']"
+                    ).click()
+        self._retry_operation(click_first_next_button, "点击第一个下一步按钮")
         time.sleep(1)
-        self.driver.find_element(
-                    by=AppiumBy.XPATH,
-                    value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='下一步']"
-                ).click()
+        
+        # 点击第二个下一步按钮
+        def click_second_next_button():
+            self.driver.find_element(
+                        by=AppiumBy.XPATH,
+                        value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='下一步']"
+                    ).click()
+        self._retry_operation(click_second_next_button, "点击第二个下一步按钮")
         time.sleep(1)
         #输入笔记标题
         self.driver.find_element(
