@@ -77,10 +77,11 @@ def get_customer_intent(keyword=None, intent=None, email=None):
             where_clauses.append("ci.userInfo = %s")
             params.append(email)
         
-        # Modified query to join with comment_manual_reply table and add is_reply field
+        # Modified query to join with comment_manual_reply table and add is_reply field and reply content
         query = """
         SELECT ci.*, 
-               CASE WHEN cmr.comment_id IS NOT NULL THEN 1 ELSE 0 END AS is_reply
+               CASE WHEN cmr.comment_id IS NOT NULL THEN 1 ELSE 0 END AS is_reply,
+               IFNULL(cmr.reply, '未回复') AS reply
         FROM customer_intent ci
         LEFT JOIN comment_manual_reply cmr ON ci.comment_id = cmr.comment_id
         """
