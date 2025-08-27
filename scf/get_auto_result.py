@@ -105,7 +105,7 @@ def get_auto_result(event, context):
             
             # 计算总记录数
             count_query = f"""
-                SELECT COUNT(*) as total 
+                SELECT COUNT(DISTINCT c.id) as total 
                 FROM xhs_notes n
                 LEFT JOIN xhs_comments c ON n.note_url = c.note_url
                 LEFT JOIN customer_intent ci ON c.id = ci.comment_id
@@ -122,7 +122,7 @@ def get_auto_result(event, context):
             if email:
                 # 普通用户查询
                 query = f"""
-                    SELECT 
+                    SELECT DISTINCT
                         c.author as author,
                         c.content as comment_content,
                         c.likes as comment_likes,
@@ -139,7 +139,7 @@ def get_auto_result(event, context):
             else:
                 # 管理员查询
                 query = f"""
-                    SELECT 
+                    SELECT DISTINCT
                         c.userInfo as email,
                         c.author as author,
                         c.content as comment_content,
