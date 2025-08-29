@@ -46,13 +46,15 @@ def get_db_connection():
         raise e
 
 
-def get_xhs_comments_by_keyword(keyword, email=None, page=1, page_size=1000):
+def get_xhs_comments_by_keyword(keyword, email=None, start_time=None, end_time=None, page=1, page_size=1000):
     """
     获取指定关键字的评论
     
     Args:
         keyword: 关键字
         email: 可选，用户邮箱
+        start_time: 可选，开始时间戳
+        end_time: 可选，结束时间戳
         page: 页码，默认为1
         page_size: 每页数量，默认为1000
         
@@ -66,22 +68,32 @@ def get_xhs_comments_by_keyword(keyword, email=None, page=1, page_size=1000):
         # 计算偏移量
         offset = (page - 1) * page_size
         
-        # 查询总数
+        # 构建WHERE条件
+        where_conditions = ["keyword = %s"]
+        params = [keyword]
+        
         if email:
-            count_query = "SELECT COUNT(*) as total FROM xhs_comments WHERE keyword = %s AND userInfo = %s"
-            cursor.execute(count_query, (keyword, email))
-        else:
-            count_query = "SELECT COUNT(*) as total FROM xhs_comments WHERE keyword = %s"
-            cursor.execute(count_query, (keyword,))
+            where_conditions.append("userInfo = %s")
+            params.append(email)
+            
+        if start_time:
+            where_conditions.append("collect_time >= FROM_UNIXTIME(%s)")
+            params.append(start_time)
+            
+        if end_time:
+            where_conditions.append("collect_time <= FROM_UNIXTIME(%s)")
+            params.append(end_time)
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        # 查询总数
+        count_query = f"SELECT COUNT(*) as total FROM xhs_comments WHERE {where_clause}"
+        cursor.execute(count_query, tuple(params))
         total_count = cursor.fetchone()['total']
         
         # 查询指定关键字的评论，带分页
-        if email:
-            query = "SELECT * FROM xhs_comments WHERE keyword = %s AND userInfo = %s LIMIT %s OFFSET %s"
-            cursor.execute(query, (keyword, email, page_size, offset))
-        else:
-            query = "SELECT * FROM xhs_comments WHERE keyword = %s LIMIT %s OFFSET %s"
-            cursor.execute(query, (keyword, page_size, offset))
+        query = f"SELECT * FROM xhs_comments WHERE {where_clause} LIMIT %s OFFSET %s"
+        cursor.execute(query, tuple(params + [page_size, offset]))
         comments = cursor.fetchall()
         
         # 关闭连接
@@ -100,12 +112,14 @@ def get_xhs_comments_by_keyword(keyword, email=None, page=1, page_size=1000):
         return [], 0
 
 
-def get_xhs_comments_by_urls(urls, page=1, page_size=1000):
+def get_xhs_comments_by_urls(urls, start_time=None, end_time=None, page=1, page_size=1000):
     """
     获取指定URL的评论
     
     Args:
         urls: URL列表
+        start_time: 可选，开始时间戳
+        end_time: 可选，结束时间戳
         page: 页码，默认为1
         page_size: 每页数量，默认为1000
         
@@ -125,15 +139,28 @@ def get_xhs_comments_by_urls(urls, page=1, page_size=1000):
         # 计算偏移量
         offset = (page - 1) * page_size
         
+        # 构建WHERE条件
+        where_conditions = [f"note_url IN ({placeholders})"]
+        params = list(urls)
+        
+        if start_time:
+            where_conditions.append("collect_time >= FROM_UNIXTIME(%s)")
+            params.append(start_time)
+            
+        if end_time:
+            where_conditions.append("collect_time <= FROM_UNIXTIME(%s)")
+            params.append(end_time)
+        
+        where_clause = " AND ".join(where_conditions)
+        
         # 查询总数
-        count_query = f"SELECT COUNT(*) as total FROM xhs_comments WHERE note_url IN ({placeholders})"
-        cursor.execute(count_query, tuple(urls))
+        count_query = f"SELECT COUNT(*) as total FROM xhs_comments WHERE {where_clause}"
+        cursor.execute(count_query, tuple(params))
         total_count = cursor.fetchone()['total']
         
         # 查询指定URL的评论，带分页
-        query = f"SELECT * FROM xhs_comments WHERE note_url IN ({placeholders}) LIMIT %s OFFSET %s"
-        params = tuple(urls) + (page_size, offset)
-        cursor.execute(query, params)
+        query = f"SELECT * FROM xhs_comments WHERE {where_clause} LIMIT %s OFFSET %s"
+        cursor.execute(query, tuple(params + [page_size, offset]))
         comments = cursor.fetchall()
         
         # 关闭连接
@@ -152,12 +179,14 @@ def get_xhs_comments_by_urls(urls, page=1, page_size=1000):
         return [], 0
 
 
-def get_xhs_comments(limit=100, page=1, page_size=1000):
+def get_xhs_comments(limit=100, start_time=None, end_time=None, page=1, page_size=1000):
     """
     获取评论，带有限制数量
     
     Args:
         limit: 限制数量，默认100条
+        start_time: 可选，开始时间戳
+        end_time: 可选，结束时间戳
         page: 页码，默认为1
         page_size: 每页数量，默认为1000
         
@@ -171,9 +200,23 @@ def get_xhs_comments(limit=100, page=1, page_size=1000):
         # 计算偏移量
         offset = (page - 1) * page_size
         
+        # 构建WHERE条件
+        where_conditions = []
+        params = []
+        
+        if start_time:
+            where_conditions.append("collect_time >= FROM_UNIXTIME(%s)")
+            params.append(start_time)
+            
+        if end_time:
+            where_conditions.append("collect_time <= FROM_UNIXTIME(%s)")
+            params.append(end_time)
+        
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
         # 查询总数，但不超过limit
-        count_query = "SELECT COUNT(*) as total FROM xhs_comments LIMIT %s"
-        cursor.execute(count_query, (limit,))
+        count_query = f"SELECT COUNT(*) as total FROM xhs_comments{where_clause}"
+        cursor.execute(count_query, tuple(params))
         total_count = min(cursor.fetchone()['total'], limit)
         
         # 查询评论，带有限制和分页
@@ -181,8 +224,8 @@ def get_xhs_comments(limit=100, page=1, page_size=1000):
         if actual_limit <= 0:
             return [], total_count
             
-        query = "SELECT * FROM xhs_comments LIMIT %s OFFSET %s"
-        cursor.execute(query, (actual_limit, offset))
+        query = f"SELECT * FROM xhs_comments{where_clause} LIMIT %s OFFSET %s"
+        cursor.execute(query, tuple(params + [actual_limit, offset]))
         comments = cursor.fetchall()
         
         # 关闭连接
@@ -235,13 +278,46 @@ def main_handler(event, context):
     # 限制每页最大数量为1000
     page_size = min(page_size, 1000)
     
+    # 添加时间筛选参数
+    start_time = query_params.get('start_time')
+    end_time = query_params.get('end_time')
+    
+    # 转换时间参数
+    if start_time:
+        try:
+            # 尝试解析为整数时间戳
+            start_time = int(start_time)
+        except ValueError:
+            # 如果不是整数，尝试解析为日期时间字符串
+            try:
+                from datetime import datetime
+                dt = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
+                start_time = int(dt.timestamp())
+            except ValueError:
+                logger.error(f"无效的开始时间格式: {start_time}")
+                start_time = None
+    
+    if end_time:
+        try:
+            # 尝试解析为整数时间戳
+            end_time = int(end_time)
+        except ValueError:
+            # 如果不是整数，尝试解析为日期时间字符串
+            try:
+                from datetime import datetime
+                dt = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
+                end_time = int(dt.timestamp())
+            except ValueError:
+                logger.error(f"无效的结束时间格式: {end_time}")
+                end_time = None
+    
     try:
         # 根据参数决定使用哪种查询方式
         if 'keyword' in query_params:
             # 按关键字查询
             keyword = query_params.get('keyword')
             email = query_params.get('email')
-            comments, total_count = get_xhs_comments_by_keyword(keyword, email, page, page_size)
+            comments, total_count = get_xhs_comments_by_keyword(keyword, email, start_time, end_time, page, page_size)
             
             # 计算总页数
             total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
@@ -260,7 +336,7 @@ def main_handler(event, context):
         elif 'urls' in query_params:
             # 按URL列表查询
             urls = query_params.get('urls', [])
-            comments, total_count = get_xhs_comments_by_urls(urls, page, page_size)
+            comments, total_count = get_xhs_comments_by_urls(urls, start_time, end_time, page, page_size)
             
             # 计算总页数
             total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
@@ -279,7 +355,7 @@ def main_handler(event, context):
         else:
             # 使用默认查询，带有可选的limit参数
             limit = int(query_params.get('limit', 100))
-            comments, total_count = get_xhs_comments(limit, page, page_size)
+            comments, total_count = get_xhs_comments(limit, start_time, end_time, page, page_size)
             
             # 计算总页数
             total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
@@ -314,7 +390,9 @@ if __name__ == "__main__":
             'keyword': '美食',
             'email': 'luyao-operate@lucy.ai',
             'page': 1,
-            'page_size': 20
+            'page_size': 20,
+            'start_time': '2025-06-01 00:00:00',  # 支持日期时间字符串格式
+            'end_time': '2025-06-30 23:59:59'     # 支持日期时间字符串格式
         }
     }
     result = main_handler(test_event, {})
