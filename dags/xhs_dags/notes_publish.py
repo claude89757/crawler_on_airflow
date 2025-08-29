@@ -224,13 +224,14 @@ with DAG(
     tags=['小红书','笔记发布'],
     catchup=False,
     max_active_runs=5,
-    retries=3,
-    retry_delay=timedelta(seconds=10),
 ) as dag:
 
     PythonOperator(
         task_id=f'notes_publish',
         python_callable=notes_publish,
-        provide_context=True
+        provide_context=True,
+        retries=2,
+        retry_delay=timedelta(seconds=15)
+        
         
     )
