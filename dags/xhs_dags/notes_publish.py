@@ -230,8 +230,8 @@ with DAG(
         task_id=f'notes_publish',
         python_callable=notes_publish,
         provide_context=True,
-        retries=2,
-        retry_delay=timedelta(seconds=15)
+        retries=3,
+        retry_delay=timedelta(seconds=10)
         
         
     )
