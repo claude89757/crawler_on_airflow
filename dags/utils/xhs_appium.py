@@ -2055,6 +2055,14 @@ class XHSOperator:
         发布笔记
         """
         # 点击发布按钮
+        try:
+            self.driver.find_element(
+                        by=AppiumBy.XPATH,
+                        value="//android.widget.TextView[@resource-id='com.xingin.xhs:id/-' and @text='存草稿']"
+                    ).click()
+            print('已将异常图文保存到草稿箱')
+        except Exception as e:
+            print(f"正常执行发布笔记操作")
         def click_publish_button():
             self.driver.find_element(
                         by=AppiumBy.XPATH,
