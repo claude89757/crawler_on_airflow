@@ -104,8 +104,15 @@ class XHSOperator:
             操作函数的返回值
         """
         for attempt in range(max_retries):
-
-            return operation_func()
+            try:
+                return operation_func()
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"{operation_name} 第{attempt + 1}次尝试失败: {str(e)}，正在重试...")
+                    time.sleep(1)  # 等待1秒后重试
+                else:
+                    print(f"{operation_name} 重试{max_retries}次后仍然失败: {str(e)}")
+                    raise e
 
 
 

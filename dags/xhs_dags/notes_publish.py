@@ -211,6 +211,7 @@ def notes_publish(**context):
     except Exception as e:
         update_note_status(note_title, -1)
         print(f"发布笔记过程中发生错误: {str(e)}")
+        raise
     finally:
         # 确保关闭XHS操作器
 
