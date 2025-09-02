@@ -1529,7 +1529,7 @@ class XHSOperator:
                 if url_start != -1:
                     note_url = share_text[url_start:url_end] if url_end != -1 else share_text[url_start:]
                     print(f"提取到笔记URL: {note_url}")
-                    note_url = self.get_redirect_url(note_url.replace("复制本条信息", "").strip())
+                    note_url = self.get_redirect_url(note_url.replace("复制本条信息", "").replace('复制后打开【小红书】查看笔记！', '').strip())
                     print(f"重定向后的笔记URL: {note_url}")
                     
                 else:
