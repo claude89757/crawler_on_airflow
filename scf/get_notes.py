@@ -88,6 +88,37 @@ def main_handler(event, context):
     # 计算偏移量
     offset = (page - 1) * page_size
     
+    # 处理时间筛选参数
+    start_time = query_params.get('start_time')
+    end_time = query_params.get('end_time')
+    
+    # 时间参数处理：支持整数时间戳和日期时间字符串格式
+    if start_time:
+        try:
+            # 尝试解析为整数时间戳
+            start_time = int(start_time)
+        except ValueError:
+            try:
+                # 尝试解析为日期时间字符串
+                dt = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
+                start_time = int(dt.timestamp())
+            except ValueError:
+                logger.error(f"无效的start_time格式: {start_time}")
+                start_time = None
+    
+    if end_time:
+        try:
+            # 尝试解析为整数时间戳
+            end_time = int(end_time)
+        except ValueError:
+            try:
+                # 尝试解析为日期时间字符串
+                dt = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
+                end_time = int(dt.timestamp())
+            except ValueError:
+                logger.error(f"无效的end_time格式: {end_time}")
+                end_time = None
+    
     if not keyword:
         return {
             'code': 1,
@@ -105,27 +136,37 @@ def main_handler(event, context):
         if keyword.startswith('"') and keyword.endswith('"'):
             keyword = keyword[1:-1]
         
-        # 查询总数
+        # 构建WHERE条件
+        where_conditions = ["keyword = %s"]
+        query_params_list = [keyword]
+        
         if email:
-            count_query = "SELECT COUNT(*) as total FROM xhs_notes WHERE keyword = %s AND userInfo = %s"
-            count_params = (keyword, email)
-        else:
-            count_query = "SELECT COUNT(*) as total FROM xhs_notes WHERE keyword = %s"
-            count_params = (keyword,)
-        cursor.execute(count_query, count_params)
+            where_conditions.append("userInfo = %s")
+            query_params_list.append(email)
+        
+        # 添加时间筛选条件
+        if start_time:
+            where_conditions.append("UNIX_TIMESTAMP(collect_time) >= %s")
+            query_params_list.append(start_time)
+        
+        if end_time:
+            where_conditions.append("UNIX_TIMESTAMP(collect_time) <= %s")
+            query_params_list.append(end_time)
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        # 查询总数
+        count_query = f"SELECT COUNT(*) as total FROM xhs_notes WHERE {where_clause}"
+        cursor.execute(count_query, tuple(query_params_list))
         total_count = cursor.fetchone()['total']
         
         # 计算总页数
         total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
         
         # 添加分页限制的查询
-        if email:
-            query = "SELECT * FROM xhs_notes WHERE keyword = %s AND userInfo = %s LIMIT %s OFFSET %s"
-            params = (keyword, email, page_size, offset)
-        else:
-            query = "SELECT * FROM xhs_notes WHERE keyword = %s LIMIT %s OFFSET %s"
-            params = (keyword, page_size, offset)
-        cursor.execute(query, params)
+        query = f"SELECT * FROM xhs_notes WHERE {where_clause} LIMIT %s OFFSET %s"
+        query_params_list.extend([page_size, offset])
+        cursor.execute(query, tuple(query_params_list))
         notes = cursor.fetchall()
 
         # 处理日期时间格式，使其可JSON序列化
@@ -166,6 +207,8 @@ if __name__ == "__main__":
             'email': 'luyao-operate@lucy.ai',
             'page': 1,
             'page_size': 20
+            # 'start_time': '2025-06-01 00:00:00',  # 可选：支持日期时间字符串格式
+            # 'end_time': '2025-06-30 23:59:59'     # 可选：支持日期时间字符串格式
         }
     }
     result = main_handler(test_event, {})
