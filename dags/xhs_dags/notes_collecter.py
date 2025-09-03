@@ -95,38 +95,124 @@ def save_notes_to_db(notes: list) -> None:
         cursor.close()
         db_conn.close()
 
+def get_assigned_keyword(device_index, keywords_list, total_devices):
+    """
+    根据设备索引和关键词列表，为设备分配关键词
+    Args:
+        device_index: 设备索引
+        keywords_list: 关键词列表
+        total_devices: 总设备数量
+    Returns:
+        分配给该设备的关键词，如果没有分配则返回None
+    """
+    if not keywords_list:
+        return None
+    
+    num_keywords = len(keywords_list)
+    
+    if num_keywords >= total_devices:
+        # 关键词数量 >= 设备数量：每个设备分配一个关键词
+        if device_index < num_keywords:
+            return keywords_list[device_index]
+        else:
+            return None  # 超出关键词数量的设备不执行任务
+    else:
+        # 关键词数量 < 设备数量：平均分配设备到关键词
+        devices_per_keyword = total_devices // num_keywords
+        remaining_devices = total_devices % num_keywords
+        
+        current_device = 0
+        for i, keyword in enumerate(keywords_list):
+            # 前面的关键词可能会分配到额外的设备
+            devices_for_this_keyword = devices_per_keyword + (1 if i < remaining_devices else 0)
+            
+            if current_device <= device_index < current_device + devices_for_this_keyword:
+                return keyword
+            
+            current_device += devices_for_this_keyword
+        
+        return None
+
+
 def collect_xhs_notes(device_index=0, **context) -> None:
     """
     收集小红书笔记
     Args:
         device_index: 设备索引
         **context: Airflow上下文参数字典
-            - keyword: 搜索关键词
+            - keyword: 搜索关键词（单个关键词，兼容旧版本）
+            - keywords: 搜索关键词列表（多个关键词，新功能）
             - max_notes: 最大收集笔记数量
-            - email: 用户邮箱
+            - email: 用户邮箱（可选，如果指定了specific_device_id则忽略此参数）
+            - specific_device_id: 指定的设备ID（可选，优先级高于email）
             - note_type: 笔记类型，可选值为 '图文' 或 '视频'，默认为 '图文'
     
     Returns:
         None
     """
     # 获取输入参数
-    keyword = context['dag_run'].conf.get('keyword') 
+    single_keyword = context['dag_run'].conf.get('keyword')  # 单个关键词（兼容旧版本）
+    keywords_list = context['dag_run'].conf.get('keywords', [])  # 关键词列表（新功能）
     max_notes = int(context['dag_run'].conf.get('max_notes'))
     email = context['dag_run'].conf.get('email')
+    specific_device_id = context['dag_run'].conf.get('specific_device_id')  # 指定设备ID
     note_type = context['dag_run'].conf.get('note_type')  # 默认为图文类型
     time_range = context['dag_run'].conf.get('time_range')
     search_scope=context['dag_run'].conf.get('search_scope')
     sort_by=context['dag_run'].conf.get('sort_by')
-
+    
     # 获取设备列表
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
     
-    # 根据email查找设备信息
-    device_info = next((device for device in device_info_list if device.get('email') == email), None)
-    if device_info:
-        print(f"device_info: {device_info}")
+    # 处理关键词：优先使用keywords列表，如果为空则使用单个keyword
+    if keywords_list:
+        # 多关键词模式：根据设备索引分配关键词
+        total_devices = len(device_info_list)  # 动态获取实际设备数量
+        assigned_keyword = get_assigned_keyword(device_index, keywords_list, total_devices)
+        
+        if not assigned_keyword:
+            print(f"设备索引 {device_index} 未分配到关键词，跳过任务")
+            raise AirflowSkipException(f"设备索引 {device_index} 未分配到关键词")
+        
+        keyword = assigned_keyword
+        print(f"设备索引 {device_index} 分配到关键词: {keyword}")
+    elif single_keyword:
+        # 单关键词模式（兼容旧版本）
+        keyword = single_keyword
+        print(f"使用单关键词模式: {keyword}")
     else:
-        raise ValueError("email参数不能为空")
+        raise ValueError("必须提供keyword或keywords参数")
+
+    # 设备选择逻辑：优先使用specific_device_id，其次使用email
+    if specific_device_id:
+        # 使用指定的设备ID查找设备信息
+        device_info = None
+        selected_device_index = None
+        
+        for device in device_info_list:
+            phone_device_list = device.get('phone_device_list', [])
+            if specific_device_id in phone_device_list:
+                device_info = device
+                selected_device_index = phone_device_list.index(specific_device_id)
+                break
+        
+        if not device_info:
+            raise ValueError(f"未找到指定的设备ID: {specific_device_id}")
+        
+        print(f"使用指定设备ID: {specific_device_id}")
+    else:
+        # 使用email查找设备信息
+        if not email:
+            raise ValueError("必须提供email或specific_device_id参数")
+        
+        device_info = next((device for device in device_info_list if device.get('email') == email), None)
+        if not device_info:
+            raise ValueError(f"未找到email对应的设备信息: {email}")
+        
+        selected_device_index = device_index
+        print(f"使用email查找设备: {email}")
+    
+    print(f"device_info: {device_info}")
     
     # 创建数据库连接信息，用于process_note中检查笔记是否存在
     db_hook = BaseHook.get_connection("xhs_db").get_hook()
@@ -134,8 +220,8 @@ def collect_xhs_notes(device_index=0, **context) -> None:
     # 获取设备信息
     try:
         device_ip = device_info.get('device_ip')
-        appium_port = device_info.get('available_appium_ports')[device_index]
-        device_id = device_info.get('phone_device_list')[device_index]
+        appium_port = device_info.get('available_appium_ports')[selected_device_index]
+        actual_device_id = device_info.get('phone_device_list')[selected_device_index]
     except Exception as e:
         print(f"获取设备信息失败: {e}")
         print(f"跳过当前任务，因为获取设备信息失败")
@@ -144,13 +230,13 @@ def collect_xhs_notes(device_index=0, **context) -> None:
     # 获取appium_server_url
     appium_server_url = f"http://{device_ip}:{appium_port}"
     
-    print(f"选择设备 {device_id}, appium_server_url: {appium_server_url}")
+    print(f"选择设备 {actual_device_id}, appium_server_url: {appium_server_url}")
     print(f"开始收集关键词 '{keyword}' 的小红书笔记... ，数量为'{max_notes}'")
     
     xhs = None
     try:
         # 初始化小红书操作器（带重试机制）
-        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=device_id)
+        xhs = XHSOperator(appium_server_url=appium_server_url, force_app_launch=True, device_id=actual_device_id)
         # 用于每收集三条笔记保存一次的工具函数
         batch_size = 3  # 每批次保存的笔记数量
         collected_notes = []  # 所有收集到的笔记
