@@ -109,28 +109,38 @@ def get_assigned_keyword(device_index, keywords_list, total_devices):
         return None
     
     num_keywords = len(keywords_list)
+    print(f"关键词分配调试 - 设备索引: {device_index}, 关键词数量: {num_keywords}, 总设备数: {total_devices}")
     
     if num_keywords >= total_devices:
         # 关键词数量 >= 设备数量：每个设备分配一个关键词
+        print(f"关键词数量 >= 设备数量，使用一对一分配模式")
         if device_index < num_keywords:
-            return keywords_list[device_index]
+            result = keywords_list[device_index]
+            print(f"设备 {device_index} 分配到关键词: {result}")
+            return result
         else:
+            print(f"设备 {device_index} 超出关键词范围，不分配任务")
             return None  # 超出关键词数量的设备不执行任务
     else:
         # 关键词数量 < 设备数量：平均分配设备到关键词
+        print(f"关键词数量 < 设备数量，使用平均分配模式")
         devices_per_keyword = total_devices // num_keywords
         remaining_devices = total_devices % num_keywords
+        print(f"每个关键词基础分配设备数: {devices_per_keyword}, 剩余设备数: {remaining_devices}")
         
         current_device = 0
         for i, keyword in enumerate(keywords_list):
             # 前面的关键词可能会分配到额外的设备
             devices_for_this_keyword = devices_per_keyword + (1 if i < remaining_devices else 0)
+            print(f"关键词 '{keyword}' (索引{i}) 分配设备范围: {current_device} 到 {current_device + devices_for_this_keyword - 1}")
             
             if current_device <= device_index < current_device + devices_for_this_keyword:
+                print(f"设备 {device_index} 分配到关键词: {keyword}")
                 return keyword
             
             current_device += devices_for_this_keyword
         
+        print(f"设备 {device_index} 未分配到任何关键词")
         return None
 
 
@@ -164,25 +174,6 @@ def collect_xhs_notes(device_index=0, **context) -> None:
     # 获取设备列表
     device_info_list = Variable.get("XHS_DEVICE_INFO_LIST", default_var=[], deserialize_json=True)
     
-    # 处理关键词：优先使用keywords列表，如果为空则使用单个keyword
-    if keywords_list:
-        # 多关键词模式：根据设备索引分配关键词
-        total_devices = len(device_info_list)  # 动态获取实际设备数量
-        assigned_keyword = get_assigned_keyword(device_index, keywords_list, total_devices)
-        
-        if not assigned_keyword:
-            print(f"设备索引 {device_index} 未分配到关键词，跳过任务")
-            raise AirflowSkipException(f"设备索引 {device_index} 未分配到关键词")
-        
-        keyword = assigned_keyword
-        print(f"设备索引 {device_index} 分配到关键词: {keyword}")
-    elif single_keyword:
-        # 单关键词模式（兼容旧版本）
-        keyword = single_keyword
-        print(f"使用单关键词模式: {keyword}")
-    else:
-        raise ValueError("必须提供keyword或keywords参数")
-
     # 设备选择逻辑：优先使用specific_device_id，其次使用email
     if specific_device_id:
         # 使用指定的设备ID查找设备信息
@@ -211,6 +202,31 @@ def collect_xhs_notes(device_index=0, **context) -> None:
         
         selected_device_index = device_index
         print(f"使用email查找设备: {email}")
+    
+    # 处理关键词：优先使用keywords列表，如果为空则使用单个keyword
+    if keywords_list:
+        # 多关键词模式：根据设备索引分配关键词
+        # 使用找到的device_info中的实际设备数量
+        total_devices = len(device_info.get('phone_device_list', []))
+        print(f"调试信息 - 关键词列表: {keywords_list}")
+        print(f"调试信息 - 总设备数量: {total_devices}")
+        print(f"调试信息 - 当前设备索引: {device_index}")
+        print(f"调试信息 - 设备列表: {device_info.get('phone_device_list', [])}")
+        
+        assigned_keyword = get_assigned_keyword(device_index, keywords_list, total_devices)
+        
+        if not assigned_keyword:
+            print(f"设备索引 {device_index} 未分配到关键词，跳过任务")
+            raise AirflowSkipException(f"设备索引 {device_index} 未分配到关键词")
+        
+        keyword = assigned_keyword
+        print(f"设备索引 {device_index} 分配到关键词: {keyword}")
+    elif single_keyword:
+        # 单关键词模式（兼容旧版本）
+        keyword = single_keyword
+        print(f"使用单关键词模式: {keyword}")
+    else:
+        raise ValueError("必须提供keyword或keywords参数")
     
     print(f"device_info: {device_info}")
     
