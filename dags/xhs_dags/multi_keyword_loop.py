@@ -127,6 +127,7 @@ def execute_multi_keyword_tasks(device_index: int = 0, **context):
     total_results = []
     total_notes = 0
     total_comments = 0
+    total_replies = 0
     all_comment_ids = []
     
     try:
@@ -155,10 +156,11 @@ def execute_multi_keyword_tasks(device_index: int = 0, **context):
                 total_results.append(result)
                 total_notes += result['notes_count']
                 total_comments += result['comments_count']
+                total_replies += result.get('reply_count', 0)
                 all_comment_ids.extend(result['comment_ids'])
                 
                 print(f"=== 关键词 {keyword} 执行完成 ===")
-                print(f"本轮收集笔记: {result['notes_count']} 条，评论: {result['comments_count']} 条")
+                print(f"本轮收集笔记: {result['notes_count']} 条，评论: {result['comments_count']} 条，回复: {result.get('reply_count', 0)} 条")
                 
                 # 关键词之间的休息时间
                 if idx < len(keywords) - 1:  # 不是最后一个关键词
@@ -172,6 +174,7 @@ def execute_multi_keyword_tasks(device_index: int = 0, **context):
                     'keyword': keyword,
                     'notes_count': 0,
                     'comments_count': 0,
+                    'reply_count': 0,
                     'comment_ids': [],
                     'analysis_results': [],
                     'error': str(e)
@@ -183,6 +186,7 @@ def execute_multi_keyword_tasks(device_index: int = 0, **context):
         print(f"总计处理关键词: {len(keywords)} 个")
         print(f"总计收集笔记: {total_notes} 条")
         print(f"总计收集评论: {total_comments} 条")
+        print(f"总计评论回复: {total_replies} 条")
         print(f"总计评论ID: {len(all_comment_ids)} 个")
         
         # 返回详细结果
@@ -190,6 +194,7 @@ def execute_multi_keyword_tasks(device_index: int = 0, **context):
             'total_keywords': len(keywords),
             'total_notes': total_notes,
             'total_comments': total_comments,
+            'total_replies': total_replies,
             'total_comment_ids': len(all_comment_ids),
             'keyword_results': total_results,
             'all_comment_ids': all_comment_ids
